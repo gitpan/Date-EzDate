@@ -1,11 +1,11 @@
 #!/usr/local/bin/perl -w
 use strict;
-use lib '../../';
+# use lib '../../';
 use Date::EzDate;
 use Carp 'confess', 'croak';
 use Test;
 
-BEGIN { plan tests => 25 };
+BEGIN { plan tests => 24 };
 
 # turn off warnings
 $Date::EzDate::default_warning = 0;
@@ -344,10 +344,14 @@ check_all(Date::EzDate->new($jan31->{'in'}));
 	$date->{'%A'} = 'THUR';     # weekdaylong
 	check_all($date);
 	
+	# removing this test: it assumes a particular
+	# epoch second which may not be valid on the
+	# specific system on which these tests are run.
+	# 
 	# January 31, 2002 1:05:07 am Thu
-	$date = Date::EzDate->new('July 31, 2012 10:05:07 am');
-	$date->{'%s'} = 1012457107;     # epochsec
-	check_all($date);
+	#$date = Date::EzDate->new('July 31, 2012 10:05:07 am');
+	#$date->{'%s'} = 1012457107;     # epochsec
+	#check_all($date);
 }
 # 
 # set properties
@@ -466,7 +470,6 @@ sub check_all {
 	err_comp($date->{'%P'}, 'AM');                         #  x AM/PM
 	err_comp($date->{'%p'}, 'am');                         #  * am/pm
 	err_comp($date->{'%r'}, '01:05:07 AM');                #    hour:minute:second AM/PM
-	# err_comp($date->{'%s'}, '1012457107');               #    number of seconds since start of 1970
 	err_comp($date->{'%S'}, '07');                         #    seconds
 	err_comp($date->{'%t'}, "\t");                         #    tab
 	err_comp($date->{'%T'}, '01:05:07');                   #    hour:minute:second (24 hour format)

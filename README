@@ -1,4 +1,4 @@
-Date/EzDate version 1.06
+Date/EzDate version 1.08
 ========================
 
 NAME
@@ -702,9 +702,9 @@ TO DO
         a system where the object knows what time zone it's in and if it's
         daylight savings time. Changing to another time zone changes the
         other properties such that the object is in the same moment in time
-        in the new time zone and it was in the old time zone. For example,
-        if the object represents 5pm in the Eastern Time Zone (e.g. where
-        New York City is) and its time zone is changed to Pacific Time (e.g.
+        in the new time zone as it was in the old time zone. For example, if
+        the object represents 5pm in the Eastern Time Zone (e.g. where New
+        York City is) and its time zone is changed to Pacific Time (e.g.
         where Los Angeles is) then the object would have a time of 2pm.
 
     Assignment based on format
@@ -733,7 +733,7 @@ TO DO
         I'm currently working on this feature.
 
     Greater range of available dates
-        Currently EzDate inherits the limitations of localtime(), which
+        Currently EzDate inherits the limitations of localtime, which
         generally means it can't handle dates before about 1902 or after
         about 2037. I'd like to stretch EzDate so it can handle a greater
         range of dates. Ideally, it should handle dates from the Big Bang to
@@ -745,8 +745,10 @@ TERMS AND CONDITIONS
     the same terms as Perl itself. This software comes with NO WARRANTY of
     any kind.
 
-AUTHOR
+AUTHORS
     Miko O'Sullivan miko@idocs.com
+
+    DST patch submitted by Greg Estep.
 
 VERSION
     Version 0.90 November 1, 2001
@@ -837,4 +839,12 @@ VERSION
 
         - Fixed bug in which the epochday value for dates before the epoch
         are off-by-one.
+
+    Version 1.07 May 21, 2003
+        - Implemented fix for DST problem. Used patch submitted by Greg
+        Estep.
+
+    Version 1.08 June 10, 2003
+        - Changed test.pl: removed test that incorrectly relied on the host
+        having a specific epoch. No change to the module itself.
 

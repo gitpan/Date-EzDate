@@ -1,7 +1,7 @@
 package Date::EzDate;
 use strict;
 use Carp;
-# use Dev::ShowStuff ':all';
+# use Debug::ShowStuff ':all';
 use vars qw($VERSION @ltimefields $overload $default_warning);
 
 # documentation at end of file
@@ -16,7 +16,7 @@ use overload
 
 
 # version
-$VERSION = '1.06';
+$VERSION = '1.08';
 
 # constants and globals
 use constant WARN_NONE   => 0;
@@ -202,7 +202,7 @@ use strict;
 use Carp 'croak', 'carp';
 use Tie::Hash;
 use Time::Local;
-# use Dev::ShowStuff ':all';
+# use Debug::ShowStuff ':all';
 use re 'taint';
 use POSIX;
 
@@ -224,7 +224,7 @@ use vars qw(
 	@OrdNums $OrdNumsRx
 	);
 
-@ISA = ('Tie::StdHash');
+@ISA = 'Tie::StdHash';
 
 
 # globals
@@ -566,14 +566,16 @@ sub STORE {
 			) {
 			
 			# spring forward
-			# if (($oldhour == 0) && ($self->{'hour'} == 1)) 
-			if ($oldhour == ($self->{'hour'} - 1)  )
+			if (
+				(($oldhour == 23) && ($self->{'hour'} == 0)) ||
+				($oldhour == ($self->{'hour'} - 1) )
+				)
 				{$self->setfromtime($self->{'epochsec'} - t_60_60)}
-			
+				
 			# fall back
 			elsif (
 				(($oldhour == 0) && ($self->{'hour'} == 23)) ||
-				($oldhour == ($self->{'hour'} + 1)  )
+				($oldhour == ($self->{'hour'} + 1) )
 				)
 				{$self->setfromtime($self->{'epochsec'} + t_60_60)}
 			
@@ -2061,7 +2063,7 @@ The current version does not address time zone issues.  Frankly, I haven't been 
 figure out how best to deal with them. I'd like a system where the object knows what time 
 zone it's in and if it's daylight savings time.  Changing to another time zone changes 
 the other properties such that the object is in the same moment in time in the new time 
-zone and it was in the old time zone.  For example, if the object represents 5pm in the 
+zone as it was in the old time zone.  For example, if the object represents 5pm in the 
 Eastern Time Zone (e.g. where New York City is) and its time zone is changed to Pacific 
 Time (e.g. where Los Angeles is) then the object would have a time of 2pm.
 
@@ -2089,7 +2091,7 @@ I'm currently working on this feature.
 
 =item Greater range of available dates
 
-Currently EzDate inherits the limitations of localtime(), which generally means it can't handle
+Currently EzDate inherits the limitations of localtime, which generally means it can't handle
 dates before about 1902 or after about 2037.  I'd like to stretch EzDate so it can handle a greater
 range of dates.  Ideally, it should handle dates from the Big Bang to the Big Crunch, but let's
 start with recorded human history.
@@ -2102,11 +2104,12 @@ Copyright (c) 2001-2003 by Miko O'Sullivan.  All rights reserved.  This program 
 free software; you can redistribute it and/or modify it under the same terms 
 as Perl itself. This software comes with B<NO WARRANTY> of any kind.
 
-=head1 AUTHOR
+=head1 AUTHORS
 
 Miko O'Sullivan
 F<miko@idocs.com>
 
+DST patch submitted by Greg Estep.
 
 =head1 VERSION
 
@@ -2204,6 +2207,16 @@ Also made a few minor not-so-backward-compatible changes:
 - Fixed bug in which days of DST changeover produced off-by-one problem when setting hours.
 
 - Fixed bug in which the epochday value for dates before the epoch are off-by-one.
+
+
+=item Version 1.07    May 21, 2003
+
+- Implemented fix for DST problem.  Used patch submitted by Greg Estep.
+
+=item Version 1.08    June 10, 2003
+
+- Changed test.pl: removed test that incorrectly relied on the host
+  having a specific epoch.  No change to the module itself.
 
 =back
 
