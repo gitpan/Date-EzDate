@@ -1,17 +1,19 @@
 #!/usr/local/bin/perl -w
 use strict;
-# use lib '../../';
+use lib '../../';
 use Date::EzDate;
 use Test;
 
-BEGIN { plan tests => 21 };
+BEGIN { plan tests => 22 };
 
+# turn off warnings
+$Date::EzDate::default_warning = 0;
 
 # Jan 31 date used for a lot of tests
 my $jan31 = {};
 $jan31->{'in'} = 'January 31, 2002 1:05:07 am';
 $jan31->{'funky'} = 'January 31, 2002  1:05:07 am Thu';
-$jan31->{'full'} = '01:05:07 Thu Jan 31, 2002';
+$jan31->{'full'} = 'Thu Jan 31, 2002 01:05:07';
 $jan31->{'dmy'} = '31JAN2002';
 $jan31->{'format'}->{'name'} = 'mypattern';
 $jan31->{'format'}->{'name_changed'} = 'My Pattern';
@@ -34,7 +36,6 @@ $date = Date::EzDate->new()
 $date = Date::EzDate->new($jan31->{'in'})
 	or die "cannot create with $jan31->{'in'}";
 err_comp($date->{'full'}, $jan31->{'full'});
-
 
 # a date in DDMMMYYYY format
 $date = Date::EzDate->new($jan31->{'dmy'})
@@ -77,7 +78,7 @@ err_comp($date->{'full'}, $clone->{'full'});
 {
 	my ($orgstr, $mydate, $settings);
 	
-	$orgstr = '00:00:07 Sun Apr 26, 1970';
+	$orgstr = 'Sun Apr 26, 1970 00:00:07';
 	$mydate = Date::EzDate->new($orgstr);
 	
 	err_comp($orgstr, $mydate->{'full'}, 'full');
@@ -169,6 +170,24 @@ err_comp($date->{$jan31->{'format'}->{'name_changed'}}, $jan31->{'format'}->{'ou
 # custom format
 #------------------------------------------------------
 
+
+#------------------------------------------------------
+# operator overloads
+#
+{
+	my ($date, $otherdate);
+	
+	$date = Date::EzDate->new('January 3, 2001 5:15:00 pm');
+	$otherdate = Date::EzDate->new('January 3, 2001 6:00:00 pm');
+
+	if ($date == $otherdate)
+		{ok 1}
+	else
+		{ok 0}
+}
+#
+# operator overloads
+#------------------------------------------------------
 
 # check all properties
 check_all(Date::EzDate->new($jan31->{'in'}));
@@ -320,28 +339,6 @@ check_all(Date::EzDate->new($jan31->{'in'}));
 
 
 #------------------------------------------------------
-# err_comp
-#
-sub err_comp {
-	my ($is, $should, $testname) = @_;
-	
-	if($is ne $should) {
-		$testname ||= 'fail';
-		
-		print STDERR 
-			"\n", $testname, "\n",
-			"\tis:     $is\n",
-			"\tshould: $should\n\n";	
-		ok(0);
-		exit;
-	}
-}
-#
-# err_comp
-#------------------------------------------------------
-
-
-#------------------------------------------------------
 # check all properties
 #
 sub check_all {
@@ -418,33 +415,33 @@ sub check_all {
 	# Un*x-style date formatting
 
 	# 01:05:07 Thu Jan 31, 2002
-	err_comp($date->{'%a'}, 'Thu');                      #    weekday, short
-	err_comp($date->{'%A'}, 'Thursday');                 #    weekday, long
-	err_comp($date->{'%b'}, '1');                        #  * hour, 12 hour format, no leading zero
-	err_comp($date->{'%B'}, '1');                        #  * hour, 24 hour format, no leading zero
-	err_comp($date->{'%c'}, 'Thu Jan 31 01:05:07 2002'); #    full date
-	err_comp($date->{'%d'}, '31');                       #    numeric day of the month
-	err_comp($date->{'%D'}, '01/31/02');                 #    date as month/date/year
-	err_comp($date->{'%e'}, '1');                        #  x numeric month, 1 to 12, no leading zero
-	err_comp($date->{'%f'}, '31');                       #  x numeric day of month, no leading zero
-	err_comp($date->{'%h'}, 'Jan');                      #    short month
-	err_comp($date->{'%H'}, '01');                       #    hour 00 to 23
-	err_comp($date->{'%j'}, '031');                      #    day of the year, 001 to 366
-	err_comp($date->{'%k'}, '01');                       #    hour, 12 hour format
-	err_comp($date->{'%m'}, '01');                       #    numeric month, 01 to 12
-	err_comp($date->{'%M'}, '05');                       #    minutes
-	err_comp($date->{'%n'}, "\n");                       #    newline
-	err_comp($date->{'%P'}, 'AM');                       #  x AM/PM
-	err_comp($date->{'%p'}, 'am');                       #  * am/pm
-	err_comp($date->{'%r'}, '01:05:07 AM');              #    hour:minute:second AM/PM
+	err_comp($date->{'%a'}, 'Thu');                        #    weekday, short
+	err_comp($date->{'%A'}, 'Thursday');                   #    weekday, long
+	err_comp($date->{'%b'}, '1');                          #  * hour, 12 hour format, no leading zero
+	err_comp($date->{'%B'}, '1');                          #  * hour, 24 hour format, no leading zero
+	err_comp($date->{'%c'}, 'Thu Jan 31 01:05:07 2002');  #    full date
+	err_comp($date->{'%d'}, '31');                         #    numeric day of the month
+	err_comp($date->{'%D'}, '01/31/02');                   #    date as month/date/year
+	err_comp($date->{'%e'}, '1');                          #  x numeric month, 1 to 12, no leading zero
+	err_comp($date->{'%f'}, '31');                         #  x numeric day of month, no leading zero
+	err_comp($date->{'%h'}, 'Jan');                        #    short month
+	err_comp($date->{'%H'}, '01');                         #    hour 00 to 23
+	err_comp($date->{'%j'}, '031');                        #    day of the year, 001 to 366
+	err_comp($date->{'%k'}, '01');                         #    hour, 12 hour format
+	err_comp($date->{'%m'}, '01');                         #    numeric month, 01 to 12
+	err_comp($date->{'%M'}, '05');                         #    minutes
+	err_comp($date->{'%n'}, "\n");                         #    newline
+	err_comp($date->{'%P'}, 'AM');                         #  x AM/PM
+	err_comp($date->{'%p'}, 'am');                         #  * am/pm
+	err_comp($date->{'%r'}, '01:05:07 AM');                #    hour:minute:second AM/PM
 	# err_comp($date->{'%s'}, '1012457107');               #    number of seconds since start of 1970
-	err_comp($date->{'%S'}, '07');                       #    seconds
-	err_comp($date->{'%t'}, "\t");                       #    tab
-	err_comp($date->{'%T'}, '01:05:07');                 #    hour:minute:second (24 hour format)
-	err_comp($date->{'%w'}, '4');                        #    numeric day of the week, 0 to 6, Sun is 0
-	err_comp($date->{'%y'}, '02');                       #    last two digits of the year
-	err_comp($date->{'%Y'}, '2002');                     #    four digit year
-	err_comp($date->{'%%'}, '%');                        #    percent sign
+	err_comp($date->{'%S'}, '07');                         #    seconds
+	err_comp($date->{'%t'}, "\t");                         #    tab
+	err_comp($date->{'%T'}, '01:05:07');                   #    hour:minute:second (24 hour format)
+	err_comp($date->{'%w'}, '4');                          #    numeric day of the week, 0 to 6, Sun is 0
+	err_comp($date->{'%y'}, '02');                         #    last two digits of the year
+	err_comp($date->{'%Y'}, '2002');                       #    four digit year
+	err_comp($date->{'%%'}, '%');                          #    percent sign
 	
 	ok(1);
 }
@@ -452,6 +449,27 @@ sub check_all {
 # check all properties
 #------------------------------------------------------
 
+
+#------------------------------------------------------
+# err_comp
+#
+sub err_comp {
+	my ($is, $should, $testname) = @_;
+	
+	if($is ne $should) {
+		$testname ||= 'fail';
+		
+		print STDERR 
+			"\n", $testname, "\n",
+			"\tis:     $is\n",
+			"\tshould: $should\n\n";	
+		ok(0);
+		exit;
+	}
+}
+#
+# err_comp
+#------------------------------------------------------
 
 
 # success

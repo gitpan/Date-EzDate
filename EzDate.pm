@@ -1,39 +1,40 @@
 package Date::EzDate;
 use strict;
 use Carp;
-use vars qw($offset $VERSION @ltimefields);
+# use Dev::ShowStuff ':all';
+use vars qw($VERSION @ltimefields $compare $default_warning);
 
 # documentation at end of file
 
+# object overloading
+use overload 
+	'""' => sub{$_[0]->{'full'}},  # strinigification
+	'<=>' => \&compare,            # comparison
+	fallback => 1;                 # operations not defined here
+
 
 # version
-$VERSION = '1.00';
+$VERSION = '1.02';
+
+# constants and globals
+use constant WARN_NONE => 0;
+use constant WARN_STDERR => 1;
+use constant WARN_CROAK => 2;
+$default_warning = 1;
+$compare = 'epochday';
 
 # psuedo-constants
 @ltimefields = 	('sec','min','hour','dayofmonth','monthnum','year','weekdaynum','yearday','dst');
 
 
 #========================================================================================
-# calculate offset
-# 
-{
-	my %date;
-	@date{@ltimefields} = localtime(0);
-	$offset = ( ($date{'hour'} + 1) * 60 * 60) + ($date{'min'} * 60) + $date{'sec'};
-}
-# 
-# calculate offset
-#========================================================================================
-
-
-#========================================================================================
 # new
 #
 sub new {
-	my ($class, $init) = @_;
+	my ($class, $init, %opts) = @_;
 	my ($rv, %tiehash);
 	
-	tie %tiehash, $class . '::Tie', $init;
+	tie %tiehash, $class . '::Tie', $init, %opts;
 	$rv = bless(\%tiehash, $class);
 	$rv->after_create();
 	
@@ -41,8 +42,7 @@ sub new {
 }
 
 
-# Called after object is created
-# By default, does nothing
+# Called after object is created. By default, does nothing
 sub after_create{}
 
 #
@@ -56,8 +56,9 @@ sub after_create{}
 sub clone {
 	my ($self) = @_;
 	my $ob = $self->tie_ob;
+	my ($rv);
 	
-	return ref($self)->new([
+	$rv = ref($self)->new([
 		$ob->{'sec'},
 		$ob->{'min'},
 		$ob->{'hour'},
@@ -69,6 +70,11 @@ sub clone {
 		$ob->{'dst'},
 		$ob->{'epochsec'}
 		]);
+	
+	%{$ob->{'formats'}} and 
+		$rv->tie_ob->{'formats'} = {%{$ob->{'formats'}}};
+	
+	return $rv;
 }
 #
 # clone
@@ -78,18 +84,20 @@ sub clone {
 #========================================================================================
 # format subs
 # 
-sub set_format {
-	my ($self, $name, $format) = @_;
+sub set_warnings {return $_[0]->tie_ob->{'warnings'} = $_[1]}
+sub zero_hour_ampm {return $_[0]->tie_ob->{'zero_hour_ampm'} = $_[1]}
 
-	# normalize name
-	$name =~ s|\s||g;
-	$name =lc($name);
-	
-	$self->tie_ob->{'formats'}->{$name} = $format;
+sub set_format {return $_[0]->tie_ob->set_format(@_[1..$#_])}
+
+sub get_format {
+	my ($self, $key) = @_;
+	my $ob = $self->tie_ob;
+	$key =~ s|\s||gs;
+	$key = lc($key);
+	return join('', @{$ob->{'formats'}->{$key}});
 }
 
-sub get_format {return $_[0]->tie_ob->{'formats'}->{$_[1]}}
-sub del_format {return delete $_[0]->tie_ob->{'formats'}->{$_[1]}}
+sub del_format {return delete $_[0]->{$_[1]}}
 sub tie_ob{return tied(%{$_[0]})}
 # 
 # format subs
@@ -154,12 +162,28 @@ sub next_month {
 #========================================================================================
 
 
+#========================================================================================
+# compare
+# 
+sub compare {
+	my ($left, $right) = @_;
+	ref($right) or $right = Date::EzDate->new($right);
+	$left->{$compare} <=> $right->{$compare};
+}
+# 
+# compare
+#========================================================================================
+
+
+
 ########################################################################################################
 package Date::EzDate::Tie;
 use strict;
-use Carp;
+use Carp 'croak', 'carp';
 use Tie::Hash;
 use Time::Local;
+# use Dev::ShowStuff ':all';
+
 
 use vars qw(
 	@ISA 
@@ -172,77 +196,79 @@ use vars qw(
 	@WeekDayLong 
 	@WeekDayShort 
 	%PCodes
-	$pcode);
+	$pcode
+	$epoch_day_offset
+	);
 
 @ISA = ('Tie::StdHash');
 
+
 # globals
-@WeekDayShort = (qw[Sun Mon Tue Wed Thu Fri Sat]);
-@WeekDayLong = (qw[Sunday Monday Tuesday Wednesday Thursday Friday Saturday]);
-@MonthShort = (qw[Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec]);
-@MonthLong = (qw[January February March April May June July August September October November December]);
-@MonthDays = (qw[31 x 31 30 31 30 31 31 30 31 30 31]);
+@WeekDayShort = qw[Sun Mon Tue Wed Thu Fri Sat];
+@WeekDayLong = qw[Sunday Monday Tuesday Wednesday Thursday Friday Saturday];
+@MonthShort = qw[Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec];
+@MonthLong = qw[January February March April May June July August September October November December];
+@MonthDays = qw[31 x 31 30 31 30 31 31 30 31 30 31];
 @WeekDayNums{qw[sun mon tue wed thu fri sat]}=(0..6);
 @MonthNums{qw[jan feb mar apr may jun jul aug sep oct nov dec]}=(0..11);
 
 # percent code regex
 $pcode = '^\%[\w\%]$';
 
-# aliases
-$PCodes{'yearlong'} = 'year';
-$PCodes{'yearshort'} = 'yeartwodigits';
-$PCodes{'month'} = 'monthlong';
-$PCodes{'weekday'} = 'weekdayshort';
-$PCodes{'dayofyear'} = 'yearday';
-$PCodes{'dayofyearbase1'} = 'yeardaybase1';
-
-# short codes of the format %Y
-$PCodes{'%Y'} = 'year';
-$PCodes{'%y'} = 'yeartwodigits';
-$PCodes{'%a'} = 'weekdayshort';
-$PCodes{'%A'} = 'weekdaylong';
-$PCodes{'%d'} = 'dayofmonth';
-$PCodes{'%D'} = '%m/%d/%y';
-$PCodes{'%H'} = 'hour';
-$PCodes{'%h'} = 'monthshort';
-$PCodes{'%b'} = 'ampmhournozero';
-$PCodes{'%B'} = 'hournozero';
-$PCodes{'%e'} = 'monthnumbase1nozero';
-$PCodes{'%f'} = 'dayofmonthnozero';
-$PCodes{'%j'} = 'yeardaybase1';
-$PCodes{'%k'} = 'ampmhour';
-$PCodes{'%m'} = 'monthnumbase1';
-$PCodes{'%M'} = 'min';
-$PCodes{'%P'} = 'ampmuc';
-$PCodes{'%p'} = 'ampmlc';
-$PCodes{'%s'} = 'epochsec';
-$PCodes{'%S'} = 'sec';
-$PCodes{'%w'} = 'weekdaynum';
-$PCodes{'%y'} = 'yeartwodigits';
-
-# short codes with long aliases
+%PCodes = qw[
+	yearlong	year
+	yearshort	yeartwodigits
+	month	monthlong
+	weekday	weekdayshort
+	dayofyear	yearday
+	dayofyearbase1	yeardaybase1
+	%Y	year
+	%y	yeartwodigits
+	%a	weekdayshort
+	%A	weekdaylong
+	%d	dayofmonth
+	%D	%m/%d/%y
+	%H	hour
+	%h	monthshort
+	%b	ampmhournozero
+	%B	hournozero
+	%e	monthnumbase1nozero
+	%f	dayofmonthnozero
+	%j	yeardaybase1
+	%k	ampmhour
+	%m	monthnumbase1
+	%M	min
+	%P	ampmuc
+	%p	ampmlc
+	%s	epochsec
+	%S	sec
+	%w	weekdaynum
+	%y	yeartwodigits
+	%T	%H:%M:%S
+	%n	newline
+	%t	tab
+	%%	percent
+	];
 $PCodes{'%c'} = '{weekdayshort} %h %d %H:%M:%S %Y';
 $PCodes{'%r'} = '%k:%M:%S %P';
-$PCodes{'%T'} = '%H:%M:%S';
-
-# character codes		
-$PCodes{'%n'} = 'newline';
-$PCodes{'%t'} = 'tab';
-$PCodes{'%%'} = 'percent';
 
 
 # constants
-use constant 't_60_60' => 3600;
-use constant 't_60_60_24' =>  86400;
+use constant t_60_60 => 3600;
+use constant t_60_60_24 =>  86400;
+use constant WARN_NONE => Date::EzDate::WARN_NONE;
+use constant WARN_STDERR => Date::EzDate::WARN_STDERR;
+use constant WARN_CROAK => Date::EzDate::WARN_CROAK;
 
 
 #========================================================================================
 
 sub TIEHASH {
-	my ($class, $time)=@_;
+	my ($class, $time, %opts)=@_;
 	my $self = bless ({}, $class);
 	
 	# set some non-date properties
+	$self->{'zero_hour_ampm'} = defined($opts{'zero_hour_ampm'}) ? $opts{'zero_hour_ampm'} : 1;
 	$self->{'formats'} = {};
 	$self->{'settings'} = {'dst_kludge' => 1};
 	
@@ -255,7 +281,7 @@ sub TIEHASH {
 		# set time from timefromfull
 		$self->setfromtime(time());		
 		
-		$time and $self->setfromtime($self->timefromfull($time));
+		defined($time) and $self->setfromtime($self->timefromfull($time));
 	}
 	
 	return  $self;
@@ -269,12 +295,55 @@ sub setfromtime {
 	my ($self, $time) = @_;
 	
 	$self->{'epochsec'} = $time;
-
+	
 	@{$self}{@Date::EzDate::ltimefields}=localtime($time);
-
+	
 	$self->{'year'} += 1900;
 }
 
+
+#========================================================================================
+
+sub set_format {
+	my ($self, $name, $format) = @_;
+	
+	# normalize name
+	$name =~ s|\s||g;
+	$name =~ tr/A-Z/a-z/;
+	
+	$self->{'formats'}->{$name} = format_split($format);
+}
+
+sub format_split {
+	my @rv = split(m/(\{[^\{\}]*\}|\%.)/, $_[0]);
+	
+	foreach my $el (@rv) {
+		if ($el =~ m|^\{.*\}$|s) {
+			$el =~ s|\s||gs;
+			$el =~ tr/A-Z/a-z/;
+			$el =~ s/minute\}$/min}/ or $el =~ s/second\}$/sec}/;
+		}
+	}
+	
+	return \@rv;
+}
+
+
+#========================================================================================
+
+sub warn {
+	my $self = shift;
+	my $level = defined($self->{'warnings'}) ? $self->{'warnings'} : $Date::EzDate::default_warning;
+	
+	$level or return undef;
+	
+	if ($level == WARN_STDERR) {
+		carp 'WARNING: ', @_;
+		return undef;
+	}
+	
+	croak @_;
+}
 
 #========================================================================================
 
@@ -283,18 +352,32 @@ sub STORE {
 	my $orgkey = $key;
 	my $orgval = $val;
 	
+	# error checking
+	if (! defined $val)
+		{return $self->warn('Must send a defined value when setting a property of an EzDate object')}
+	
+	# if value contains {, assume they're assigning a format
+	$val =~ m|[\{\%]| and return $self->set_format($key, $val);
+	
 	# clean a little
-	($key =~ s/minute$/min/) or ($key =~ s/second$/sec/);
+	($key =~ s|minute$|min|s) or ($key =~ s|second$|sec|s);
 	
 	# get key from aliases if necessary
 	$key = $self->get_alias($key, 'strip_no_zero'=>1);
 	
-	# error checking
-	if (! defined $val)
-		{croak 'Must send a defined value when setting a property of an EzDate object: key=' . $key}
+	# dayofmonth, weekdaynum, yearday
+	if ($key =~ m/^(dayofmonth)|(weekdaynum)|(yearday)$/) {
+		# warn if setting day of month greater than month has days
+		if ( 
+			($key eq 'dayofmonth') && 
+			($val > daysinmonth($self->{'monthnum'}, $self->{'year'}))
+			) {
+			$self->warn("setting day of month ($val) to higher than days in month (", daysinmonth($self->{'monthnum'}, $self->{'year'}), ')');
+		}
+		
+		$self->setfromtime($self->{'epochsec'} - ($self->{$key} *  t_60_60_24) + ($val * t_60_60_24) );
+	}
 	
-	elsif ($key =~ m/^(dayofmonth)|(weekdaynum)|(yearday)$/)
-		{$self->setfromtime($self->{'epochsec'} - ($self->{$key} *  t_60_60_24) + ($val * t_60_60_24) )}
 	
 	elsif ($key eq 'sec')
 		{$self->setfromtime($self->{'epochsec'} - $self->{'sec'} + $val)}
@@ -310,7 +393,7 @@ sub STORE {
 	
 	# hour and minute
 	elsif ( ($key eq 'clocktime') || ($key eq 'miltime') ) {	
-		my ($changed, $hour, $min, $sec) = gettime($val);
+		my ($changed, $hour, $min, $sec) = $self->gettime($val);
 		
 		unless (defined $hour)
 			{$hour = $self->{'hour'}}
@@ -352,7 +435,7 @@ sub STORE {
 		
 		# error checking
 		unless ( ($val eq 'am') || ($val eq 'pm') )
-			{croak 'ampm may only be set to am or pm'}
+			{return $self->warn('ampm may only be set to am or pm')}
 		
 		# if no change, we're done
 		if ($self->{'hour'} < 12) {
@@ -371,7 +454,7 @@ sub STORE {
 	}
 	
 	elsif ($key eq 'dst')
-		{croak 'dst property is read-only'}
+		{return $self->warn('dst property is read-only')}
 	
 	elsif ($key eq 'epochsec')
 		{$self->setfromtime($val)}
@@ -433,8 +516,13 @@ sub STORE {
 		# make sure day of month isn't greater than maximum day of target month
 		$maxday = daysinmonth($self->{'monthnum'}, $val);
 		
-		if ($self->{'dayofmonth'} > $maxday)
-			{$targetday = $maxday}
+		if ($self->{'dayofmonth'} > $maxday) {
+			$self->warn(
+				"Changing the year sets day of month ($self->{'dayofmonth'}) to higher than days in month ($maxday); ", 
+				"setting the day down to $maxday"
+				);
+			$targetday = $maxday;
+		}
 		else
 			{$targetday = $self->{'dayofmonth'}}
 		
@@ -469,8 +557,13 @@ sub STORE {
 		
 		# make sure day of month isn't greater than maximum day of target month
 		$maxday= daysinmonth($val, $self->{'year'});
-		if ($self->{'dayofmonth'} > $maxday)
-			{$targetday = $maxday}
+		if ($self->{'dayofmonth'} > $maxday) {
+			$self->warn(
+				"Changing the month sets day of month ($self->{'dayofmonth'}) to higher than days in month ($maxday); ", 
+				"setting the day down to $maxday"
+				);
+			$targetday = $maxday;
+		}
 		else
 			{$targetday = $self->{'dayofmonth'}}
 		
@@ -520,65 +613,56 @@ sub STORE {
 		}
 	
 	else
-		{croak "Do not understand key: $orgkey"}
+		{return $self->warn("Do not understand key: $orgkey")}
 }
 
 
 #========================================================================================
 
 sub FETCH {
-	my ($self, $key) = @_;
-	my ($ampm, $ampmhour, $orgkey);
-	$orgkey = $key;
+	my ($self, $key, %opts) = @_;
+	my ($ampm, $ampmhour);
+	my $orgkey = $key;
+	
 	
 	# get key from aliases if necessary
 	$key = $self->get_alias($key);
 	
+	
 	#---------------------------------------------------------------------------------------------------
 	# nested properties
 	# 
-	if (
-		($key =~ m|[\{\%]|) &&
-		($key !~ m|$pcode|o)
-		) {
-		
-		# format check
-		if ($key =~ m|\{|) {
-			unless ($key =~ m|^[^\{\}]*(\{[^\{\}]+\}[^\{\}]*)+[^\{\}]*$|)
-				{croak "invalid format string: $key"}
-		}
-		
-		my ($del, @rv);
-		
-		# split
-		$del = not_there($key);
-		$key =~ s|\}|\}$del|g;
-		$key =~ s|\{|$del\{|g;
-		$key =~ s|(\%[\w\%])|$del$1$del|g;
-		$key =~ s|$del$del|$del|g;
-		@rv = split($del, $key);
+	if ( (! ref $key) && ($key =~ m|[\{\%]|) && ($key !~ m|$pcode|o) )
+		{$key = format_split($key)}
+	
+	if (ref $key) {
+		my @rv = @$key;
 		
 		foreach my $el (@rv) {
 			# if this is one of the format elements
+			# then fetch the value of the given key
 			if (
-				($el =~ s|\{([^\}]+)\}|$1|) ||
-				($el =~ m|$pcode|o)
+				($el =~ s|\{([^\}]+)\}|$1|) ||  # if it is enclosed in {}
+				($el =~ m|$pcode|o)             # if it is a %x code
 				) {
 				$el =~ s|['"\s]||g;
-				$el = $self->FETCH($el);
+				$el = $self->FETCH($el, normalized=>1);
 			}
 		}
 		
-		return join('', @rv);;
+		return join('', @rv);
 	}
 	#
 	# nested properties
 	#---------------------------------------------------------------------------------------------------
-
+	
 	
 	# clean up key
-	$key = lc($key);
-	($key =~ s/minute$/min/) or ($key =~ s/second$/sec/);
+	unless ($opts{'normalized'}) {
+		$key =~ tr/A-Z/a-z/;
+		$key =~ s/minute$/min/ or $key =~ s/second$/sec/;
+	}
+	
 	
 	# already or mostly calculated
 	if (exists $self->{$key}) {
@@ -593,9 +677,9 @@ sub FETCH {
 		{return $self->FETCH($key) + 0}
 	
 	# weekday
-	if ($key eq 'weekdayshort')
+	if ($key =~ m/^(weekdayshort|dayofweek)$/)
 		{return $WeekDayShort[$self->{'weekdaynum'}]}
-	if ($key eq 'weekdaylong')
+	if ($key =~ m/^(weekdaylong|dayofweeklong)$/)
 		{return $WeekDayLong[$self->{'weekdaynum'}]}
 	
 	# month
@@ -622,7 +706,7 @@ sub FETCH {
 		{return $self->getepochday}
 	
 	# leapyear
-	if ($key =~ m/^(is){0,1}leapyear/)
+	if ($key =~ m/^(is)?leapyear/)
 		{return isleapyear($self->{'year'})}
 	
 	# days in month
@@ -636,13 +720,13 @@ sub FETCH {
 	# full
 	if ($key eq 'full') {
 		return 
-			zeropad($self->{'hour'})   . ':' . 
-			zeropad($self->{'min'})    . ':' . 
-			zeropad($self->{'sec'})    . ' ' . 
-			$WeekDayShort[$self->{'weekdaynum'}]    . ' ' . 
-			$MonthShort[$self->{'monthnum'}]      . ' ' . 
-			$self->{'dayofmonth'}      . ', ' . 
-			$self->{'year'};
+			$WeekDayShort[$self->{'weekdaynum'}]   .  ' ' . 
+			$MonthShort[$self->{'monthnum'}]       .  ' ' . 
+			$self->{'dayofmonth'}                  .  ', ' . 
+			$self->{'year'}                        .  ' ' .
+			zeropad($self->{'hour'})               .  ':' . 
+			zeropad($self->{'min'})                .  ':' . 
+			zeropad($self->{'sec'});
 	}
 	
 	# military time, aka "miltime"
@@ -692,9 +776,22 @@ sub FETCH {
 	$key eq 'percent' && return '%';
 	
 	# else we don't know what property is needed
-	croak "do not know this format: $orgkey";
+	return $self->warn("do not know this format: $orgkey");
 }
 
+
+#========================================================================================
+sub DELETE {
+	my ($self, $key) = @_;
+	
+	$key =~ s|\s||gs;
+	$key = lc($key);
+	
+	return delete $self->{'formats'}->{$key};
+}
+
+
+sub del_format {return delete $_[0]->tie_ob->{'formats'}->{$_[1]}}
 
 #========================================================================================
 sub isleapyear {
@@ -736,8 +833,15 @@ sub getepochday {
 	my ($self, $epochsec) = @_;
 	
 	defined($epochsec) or $epochsec = $self->{'epochsec'};
+
+	# calculate $epoch_day_offset
+	unless (defined $epoch_day_offset) {
+		my %date;
+		@date{@Date::EzDate::ltimefields} = localtime(0);
+		$epoch_day_offset = ( ($date{'hour'} + 1) * 60 * 60) + ($date{'min'} * 60) + $date{'sec'};
+	}
 	
-	return int( ($epochsec + ${Date::EzDate::offset} ) / t_60_60_24);
+	return int( ($epochsec + $epoch_day_offset) / t_60_60_24);
 }
 
 sub getepochhour {
@@ -770,14 +874,17 @@ sub timefromfull {
 	
 	# error checking
 	if (! defined $val)
-		{croak "did not get a time string"}
-
+		{return $self->warn("did not get a time string")}
+	
 	# quick return: if they just put in an integer
 	if ($val =~ m/^\d+$/)
 		{return $val}
 	
+	# alias hour am/pm to hour:00 am/pm
+	$self->{'zero_hour_ampm'} and $val =~ s/(^|[^:\d])(\d+)\s*([ap]m)/$1$2:00:00 $3/gis;
+	
 	# normalize
-	$val = lc($val);
+	$val =~ tr/A-Z/a-z/;
 	$val =~ s/[^\w:]/ /g;
 	$val =~ s/\s*:\s*/:/g;
 	$val =~ s/(\d)([a-z])/$1 $2/g;
@@ -785,6 +892,16 @@ sub timefromfull {
 	$val =~ s/\s+/ /g;
 	$val =~ s/^\s*//;
 	$val =~ s/\s*$//;
+
+	# today, tomorrow, and yesterday
+	if ( ($val eq 'today') || ($val eq 'now') )
+		{return time()}
+	if ($val eq 'tomorrow')
+		{return time() + t_60_60_24}
+	if ($val eq 'yesterday')
+		{return time() - t_60_60_24}
+
+	# normalize futher
 	$val =~ s/([a-z]{3})[a-z]+/$1/g;
 	
 	# remove weekday
@@ -793,28 +910,28 @@ sub timefromfull {
 	
 	# attempt to get time
 	unless ($opts{'dateonly'}) {
-		($val, $hour, $min, $sec) = gettime($val, 'skipjustdigits'=>1);
+		($val, $hour, $min, $sec) = $self->gettime($val, 'skipjustdigits'=>1);
 	}
 	
 	# attempt to get date
 	unless ($opts{'timeonly'}) {
-
-	if (length $val)
-				{($val, $day, $month, $year) = getdate($val)}}
-
+		if (length $val)
+			{($val, $day, $month, $year) = getdate($val)}
+	}
+	
 	# trim
 	$val =~ s/^\s*//;
 	
 	# attempt to get time again
 	unless ($opts{'dateonly'}) {
 		if (length($val) && (! defined($hour)) )
-			{($val, $hour, $min, $sec) = gettime($val, 'skipjustdigits'=>1, 'croakonfail'=>1)}
+			{($val, $hour, $min, $sec) = $self->gettime($val, 'skipjustdigits'=>1, 'croakonfail'=>1)}
 	}
 	
 	# if we didn't get a day or an hour, we didn't recognize the pattern
-	if (length($val) )
-		{croak "Did not recognize date/time pattern [$val]: $orgval"}
-
+	if (length($val))
+		{return $self->warn("Did not recognize date/time pattern ($val): $orgval")}
+	
 	# default everything that isn't defined
 	unless (defined $hour)
 		{$hour = $self->{'hour'}}
@@ -915,7 +1032,7 @@ sub timefromfull {
 # 5:34:13 pm
 # 2330 (military time)
 sub gettime {
-	my ($str, %opts)= @_;
+	my ($self, $str, %opts)= @_;
 	my ($hour, $min, $sec);
 	
 	# clean up a little
@@ -942,7 +1059,7 @@ sub gettime {
 	}
 	
 	# 5:34 pm
-	elsif ($str =~ s/^(\d+):(\d+) (a|p)m{0,1}\s*//) {
+	elsif ($str =~ s/^(\d+):(\d+) (a|p)m?\s*//) {
 		$hour = ampmhour($1, $3);
 		$min = $2;
 	}
@@ -954,7 +1071,7 @@ sub gettime {
 	}
 	
 	# 5 pm
-	elsif ($str =~ s/^(\d+) (a|p)m{0,1}\b\s*//)
+	elsif ($str =~ s/^(\d+) (a|p)m?\b\s*//)
 		{$hour = ampmhour($1, $2)}
 	
 	# elsif just digits
@@ -965,9 +1082,8 @@ sub gettime {
 	}
 	
 	# else don't recognize format
-	elsif ($opts{'croakonfail'}) {
-		croak "don't recognize time format: $str";
-	}
+	elsif ($opts{'croakonfail'})
+		{return $self->warn("don't recognize time format: $str")}
 
 	return ($str, $hour, $min, $sec);
 }
@@ -989,19 +1105,6 @@ sub zeropad {
 	my ($rv, $length) = @_;
 	$length ||= 2;
 	return ('0' x ($length - length($rv))) . $rv;
-}
-
-
-sub not_there {
-	my ($org) = @_;
-	my $rand = '2572713';
-	
-	while ($org =~ m|$rand|) {
-		$rand = rand;
-		$rand =~ s|^0\.||;
-	}
-	
-	return $rand;
 }
 
 
@@ -1035,14 +1138,6 @@ __END__
 Date::EzDate - Date and time manipulation made easy
 
 
-=begin devmeta
-
-email: miko@idocs.com
-stage: beta
-
-=end devmeta
-
-
 =head1 SYNOPSIS
 
 An EzDate object represents a single point in time and exposes all properties of that 
@@ -1052,32 +1147,36 @@ point. EzDate has many features, here are a few:
  my $mydate = Date::EzDate->new();
 
  # output some date information
- print $mydate->{'full'}, "\n";  # e.g. output:  09:06:26 Wed Apr 11, 2001
+ print $mydate, "\n";  # e.g. output:  Wed Apr 11, 2001 09:06:26 
 
  # go to next day
  $mydate->{'epochday'}++;
 
+ # determine if the date is before some other date
+ if ($mydate < 'June 21, 2003')
+     {...}
+
  # output some other date and time information
  # e.g. output:  Thursday April 12, 2001 09:06 am
  print
-	$mydate->{'weekdaylong'},   ' ',
-	$mydate->{'monthlong'},     ' ',
-	$mydate->{'dayofmonth'},    ', ',
-	$mydate->{'year'},          ' ',
-	$mydate->{'ampmhour'},      ':',
-	$mydate->{'min'},           ' ',
-	$mydate->{'ampm'},          "\n";
+	$mydate->{'weekday long'},        ' ',
+	$mydate->{'month long'},          ' ',
+	$mydate->{'day of month'},        ', ',
+	$mydate->{'year'},                ' ',
+	$mydate->{'ampm hour no zero'},   ':',
+	$mydate->{'min'},                 ' ',
+	$mydate->{'am pm'},               "\n";
 
  # go to Monday of same week, but be lazy and don't spell out 
  # the whole day or case it correctly
- $mydate->{'weekdaylong'} = 'MON';
+ $mydate->{'weekday long'} = 'MON';
 
- print $mydate->{'full'}, "\n";  # e.g. output:  09:06:26 Mon Apr 09, 2001
+ print $mydate, "\n";  # e.g. output:  Mon Apr 09, 2001 09:06:26
 
  # go to previous year
  $mydate->{'year'}--;
 
- print $mydate->{'full'}, "\n";  # e.g. output:  09:06:26 Sun Apr 09, 2000
+ print $mydate, "\n";  # e.g. output:  Sun Apr 09, 2000 09:06:26 
 
 =head1 INSTALLATION
 
@@ -1136,10 +1235,84 @@ since the epoch).   The time (i.e. hour:min:sec) of the object does not change.
 This demonstrates the basic concept: almost any of the properties can be set as well as read and EzDate will take care
 of resetting all other properties as needed.
 
-=head1 METHODS
+=head1 YESTERDAY and TOMORROW
 
-Almost everything EzDate does is through reading and setting properties, so EzDate has few methods. 
-Currently there is only one static method (C<new()>) and two object methods (C<clone()> and C<next_month()>).
+In addition to initializing the EzDate object with either nothing (i.e. the current day)
+or with a string representing a date/time, you can initialize the object with the strings
+C<YESTERDAY> or C<TOMORROW>.  For example, the following code creates an EzDate object
+with tomorrow's date:
+
+  $date = Date::EzDate->new('tomorrow');
+
+=head1 STRINGIFICATION
+
+EzDate objects stringify to a full representation of the date.  So, for example, the following
+code outputs a string like C<Tue Sep 3, 2002 14:01:02>:
+
+	$date = Date::EzDate->new();
+	print $date, "\n";
+
+The object stringifies to its C<full> format, so if you want to change how it
+stringifies simply change the C<full> format.  For example, the following 
+code outputs a string like C<September 3, 2002>:
+
+	$date->{'full'} = '{month long} {day of month no zero} {year}';
+	print $date, "\n";
+
+=head1 COMPARISON
+
+There are two main ways to compare EzDate objects: by comparing the object directly using the numeric comparison operators,
+or by comparing their properties.
+
+=head2 Overloaded Numeric Comparison Operators
+
+EzDate overloads the numeric comparison operators.  The C<epochday> properties of two EzDate objects can be compared 
+using the C<==>, 
+C<E<gt>>, 
+C<E<gt>=>, 
+C<E<lt>>, 
+C<E<lt>=> , and
+C<E<lt>=E<gt>>, 
+operators.  
+For example, the following code creates
+two EzDate objects, then determines if the first object is less than the second:
+
+	$mybday = Date::EzDate->new();
+	$yourbday = Date::EzDate->new('tomorrow');
+
+	if ($mybday < $yourbday) {
+		....
+	}
+
+Only one of the two items being compared needs be an EzDate object.  The other can be a string representation
+of a date.  For example, the following code correctly determines if the given EzDate object is before
+June 25, 2003:
+
+	if ($date < 'June 25, 2003') {
+		...
+	}
+
+By default, the comparison is done on the C<epochday> property, so two EzDate objects that have the same date
+but different times will be considered the same.  If you want to compare based on some other property, set
+$Date::EzDate::compare to the name of the property to compare.  For example, the following code sets 
+the comparison property to C<epoch second>, meaning that two date/times are considered the same only if
+they are identical down to the second:
+
+	$date = Date::EzDate->new('January 3, 2001');
+
+=head2 Comparing Properties
+
+The other way to compare dates is to compare their properties.  For example, you can simple determine if two
+dates are on the same day of week by using their C<day of week> properties:
+
+	$date = Date::EzDate->new('January 3, 2001');
+	$otherdate = Date::EzDate->new('January 10, 2001');
+	
+	if ($date->{'day of week'} eq $otherdate->{'day of week'}) {
+		...
+	}
+
+=head1 METHODS
 
 =head2 new([I<date string>])
 
@@ -1163,6 +1336,12 @@ The following are valid ways to instantiate an EzDate object:
  
  # epoch second (23:27:39, Tue Apr 10, 2001 if you're curious) 
  my $date = Date::EzDate->new(986959659);
+ 
+ # yesterday
+ my $date = Date::EzDate->new('yesterday');
+ 
+ # tomorrow
+ my $date = Date::EzDate->new('tomorrow');
 
 =head2 $mydate->set_format($name, $format)
 
@@ -1170,16 +1349,22 @@ C<set_format> allows you to specify a custom format for use later on.
 For example, suppose you want a format of the form I<Monday, June 10, 2002>.
 You can specify that format using C<set_format> like this:
 
-  $date->set_format('myformat', '{weekdaylong}, {monthlong} {dayofmonth}, {year}');
+  $date->set_format('myformat', '{weekday long}, {month long} {day of month}, {year}');
   print $date->{'myformat'}, "\n";
+
+You can also create a custom format by simply assigning the format to its name.  
+If EzDate sees a C<{> in the value being assigned, it knows that you are
+assigning a format, not a date. The set_format line above could be written like this:
+  
+  $date->{'myformat'} = '{weekday long}, {month long} {day of month}, {year}';
 
 Note that it's not necessary to store a custom format if you're only going to use it
 once.  If you wanted the format above, but just once, you could output it like this:
 
-  print $date->{'{weekdaylong}, {monthlong} {dayofmonth}, {year}'};
+  print $date->{'{weekday long}, {month long} {day of month}, {year}'};
 
 To delete a custom format, C<$mydate->del_format($name)>. To get the format string itself, 
-use C<$mydate->get_format($name)>.
+use C<$mydate->get_format($name)>.  
 
 If you use the same custom format in a lot of different places in your project, you might
 find it easier to create your own customer super-class of Date::EzDate so that you can 
@@ -1190,6 +1375,30 @@ set the custom formats in one place.  See "Super-classing Date::EzDate" below.
 This method returns an EzDate object exactly like the object it was called from.  C<clone> is much 
 cheaper than creating a new EzDate object and then setting the new object to have the same properties 
 as another EzDate object.
+
+
+=head2 $mydate->set_warnings($warning_level)
+
+When EzDate receives invalid instructions, by default it outputs a warning and continues.  For
+example, if you use a time/date format that EzDate doesn't recognize, it outputs a warning to 
+STDERR and ens the attempt to set the date/time.  There are two other ways that EzDate could
+handle the error: it could ignore the error completely, or it could end the entire program.
+
+You can set which error handling you prefer with the C<set_warnings> method.  The first and only
+argument indicates how to handle errors.  There are three possible values:
+
+	0	Do not handle error in any way
+	1	Output error to STDERR (default)
+	2	Output to STDERR and exit program
+
+So, for example, the following code sets the warnings to level 2:
+
+  $date->set_warnings(0);
+
+You can set the global default warning level by setting $Date::EzDate::default_warning.  For 
+example, the following code sets the global default level to 2:
+
+  $Date::EzDate::Tie::default_warning = 2;
 
 =head2 $mydate->next_month([integer])
 
@@ -1210,6 +1419,26 @@ This command moves the date backward three months:
 
 C<next_month()> handles year boundaries without problem.  Calling C<next_month()> for a date in 
 December moves the date to January of the next year.
+
+=head2 $mydate->zero_hour_ampm(1|0)
+
+In general, EzDate operates on the principal that only date/time properties that are explicitly
+changed are changed.  However, this rule was confusing people in one manner,
+so I changed the default behavior.  If you set the hour using the format C<hour am|pm> (e.g.
+C<4 am> without specifying the minute or second, then EzDate assumes you meant to 
+set the minute and second to 0.  So, the following string sets the object to exactly
+4:00:00 pm:
+
+  $date = Date::EzDate->new('4 pm');
+
+If you would prefer the old behavior where the time would be set to whatever the current minute and second are, then
+call C<zero_hour_ampm> with an argument of zero:
+
+  $date->zero_hour_ampm(0);
+
+You can also pass C<zero_hour_ampm> as an initial argument for C<new>:
+
+  $date = Date::EzDate->new('January 31, 2002 1 am', zero_hour_ampm=>0);
 
 =head2 after_create
 
@@ -1428,19 +1657,25 @@ each property with braces:
 
 =head2 Storing custom formats
 
-EzDate allows you to set your own custom date formats.  This will come in handy for special date 
+EzDate allows you to store your custom date formats for repeated calls.  This comes in handy for 
 formats that are needed in several places throughout a project.  For example, suppose you want all 
 your dates in the format I<Monday, June 10, 2002>. Of course, you could output them using a 
-format string like in the example above, but even that will get tiring if you need to output the
+format string like in the example above, but even that will get tiring if you need to output the 
 same format in several places.  Much easier would be to set the format once.  To do so, just call the 
 C<set_format> method with the name of the format and the format itself:
 
-  $date->set_format('myformat', '{weekdaylong}, {monthlong} {dayofmonth}, {year}');
+  $date->set_format('myformat', '{weekday long}, {month long} {day of month}, {year}');
   print $date->{'myformat'}, "\n";
+
+You can also create a custom format by simply assigning the format to its name.  
+If EzDate sees a C<{> in the value being assigned, it knows that you are
+assigning a format, not a date. The set_format line above could be written like this:
+
+  $date->{'myformat'} = '{weekday long}, {month long} {day of month}, {year}';
 
 =head2 Un*x-style date formatting
 
-To make the Unix types happy you format your dates using standard Un*x date codes.  The format string 
+To make the Unix types happy you can format your dates using standard Un*x date codes.  The format string 
 must contain at least one % or EzDate won't know it's a format string. For example, you could output a
 date like this:
 
@@ -1551,8 +1786,6 @@ EzDate is probably not a good choice for handling dates before 1970.
 
 The following list itemizes features I'd like to add to EzDate.  
 
-=over
-
 =item Time zone properties
 
 The current version does not address time zone issues.  Frankly, I haven't been able to 
@@ -1576,6 +1809,16 @@ about handling weirdly formatted dates, so this feature is not as pressingly nee
 =item Next weekday
 
 I'd like a function for moving the date forward (or backward) to the next (previous) day of a week.  
+
+=item Time span object
+
+An EzDate object represents a point in time.  I'd also like to have an object that represents
+a span of time.  For example, a span object could represent "2 days, 3 hours, 18 seconds".
+An object like that could then be used for calculating the difference between two dates.
+
+The chief difficulty is in designing how to represent leap years.  A time span of "2 years"
+might represent different numbers of days depending on whether or not the 2 years
+happen to include a leap day.
 
 =back
 
@@ -1638,7 +1881,41 @@ Also made a few minor not-so-backward-compatible changes:
 - Changed C<nextmonth> to C<next_month> to stay compatible with other 
   methods that were added and will be added.
 
+=item Version 1.01    Aug 14, 2002
+
+- Fixed bug that clones do not return formats
+
+- Tightened up the code a little
+
+=item Version 1.02    Sep 03, 2002
+
+- Added ability to set a format by just assigning it to a key
+
+- Added warnings to situations where the IM in DWIM isn't always clear.
+
+- Added stringification of EzDate object
+
+- Added overloaded comparison operators
+
+- Made not-backward-compatible change to the C<full> format.
+
+- Improved efficiency of custom formats
+
 =back
-        
+
+
+=begin CPAN
+
+-------------------------------------------------------------------
+Version 1.00
+
+uploaded:  July 10, 2002 
+appeared:  July 12, 2002
+announced: July 23, 2002
+
+
+=end CPAN
+
+
 =cut
 
