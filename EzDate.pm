@@ -4,7 +4,7 @@ use Carp;
 use vars ('$offset', '$VERSION');
 
 # version
-$VERSION = '0.92';
+$VERSION = '0.93';
 
 # documentation at end of file
 
@@ -544,6 +544,7 @@ sub FETCH {
 		# day of the year, 001 to 366	%j	222
 		if ($rv =~ m/%j/) {
 			my $s = $self->FETCH('yearday');
+			$s++;  # increment by one to make it one-based
 			$rv =~ s/%j/$s/g
 		}
 		
@@ -1501,7 +1502,7 @@ I'd like the option of moving the date forward (or backward) to the next (previo
 
 =head1 TERMS AND CONDITIONS
 
-Copyright (c) 2001-2002 by Miko O'Sullivan.  All rights reserved.  This program is 
+Copyright (c) 2001 by Miko O'Sullivan.  All rights reserved.  This program is 
 free software; you can redistribute it and/or modify it under the same terms 
 as Perl itself. This software comes with B<NO WARRANTY> of any kind.
 
@@ -1516,6 +1517,7 @@ F<miko@idocs.com>
  Version 0.90    November 1, 2001
  Version 0.91    December 10, 2001
  Version 0.92    January  15, 2002
+ Version 0.93    February 11, 2002
 
 =cut
 
