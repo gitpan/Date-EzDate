@@ -4,7 +4,7 @@ use Carp;
 use vars ('$offset', '$VERSION');
 
 # version
-$VERSION = '0.91';
+$VERSION = '0.92';
 
 # documentation at end of file
 
@@ -317,16 +317,20 @@ sub STORE {
 			($oldhour != $self->{'hour'})
 			) {
 			# spring forward
-			if (($oldhour == 0) && ($self->{'hour'} == 1)) 
+			# if (($oldhour == 0) && ($self->{'hour'} == 1)) 
+			if ($oldhour == ($self->{'hour'} - 1)  )
 				{$self->setfromtime($self->{'epochsec'} - t_60_60)}
 			
 			# fall back
-			elsif (($oldhour == 0) && ($self->{'hour'} == 23)) 
+			elsif (
+				(($oldhour == 0) && ($self->{'hour'} == 23)) ||
+				($oldhour == ($self->{'hour'} + 1)  )
+				)
 				{$self->setfromtime($self->{'epochsec'} + t_60_60)}
 			
 			# else die
 			else
-				{die 'unable to handle epochday++ for date'}
+				{die "unable to handle epochday++ for date [\$oldhour=$oldhour] [\$self->{'hour'}=$self->{'hour'}]"}
 		}
 
 	}
@@ -1072,8 +1076,8 @@ Date::EzDate --  Date manipulation made easy.
 
 =begin devmeta
 
-email: mosullivan@crtinc.com
-stage: alpha
+email: miko@idocs.com
+stage: beta
 
 =end devmeta
 
@@ -1497,7 +1501,7 @@ I'd like the option of moving the date forward (or backward) to the next (previo
 
 =head1 TERMS AND CONDITIONS
 
-Copyright (c) 2001 by Miko O'Sullivan.  All rights reserved.  This program is 
+Copyright (c) 2001-2002 by Miko O'Sullivan.  All rights reserved.  This program is 
 free software; you can redistribute it and/or modify it under the same terms 
 as Perl itself. This software comes with B<NO WARRANTY> of any kind.
 
@@ -1509,7 +1513,9 @@ F<miko@idocs.com>
 
 =head1 VERSION
 
-Version 0.90    November 1, 2001
+ Version 0.90    November 1, 2001
+ Version 0.91    December 10, 2001
+ Version 0.92    January  15, 2002
 
 =cut
 

@@ -1,6 +1,6 @@
 Revision history for Perl extension Date::EzDate.
 
-0.01  Fri Dec 21 15:07:24 2001
-	- original version; created by h2xs 1.20 with options
+0.01  Sat Feb  9 21:48:30 2002
+	- original version; created by h2xs 1.21 with options
 		-X -n Date::EzDate
 
