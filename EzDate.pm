@@ -4,7 +4,7 @@ use Carp;
 use vars ('$offset', '$VERSION');
 
 # version
-$VERSION = '0.90';
+$VERSION = '0.91';
 
 # documentation at end of file
 
@@ -36,7 +36,8 @@ sub new {
 
 
 #========================================================================================
-# clone object
+# clone
+#
 sub clone {
 	my ($self) = @_;
 	my $ob = tied(%{$self});
@@ -54,6 +55,22 @@ sub clone {
 		$ob->{'epochsec'}
 		]);
 }
+#
+# clone
+#========================================================================================
+
+
+#========================================================================================
+# get_settings
+#
+sub get_settings {
+	my ($self) = @_;
+	my $ob = tied(%{$self});
+	return $ob->{'settings'};
+}
+#
+# get_settings
+#========================================================================================
 
 
 #========================================================================================
@@ -141,7 +158,12 @@ use constant 't_60_60_24' =>  86400;
 sub TIEHASH {
 	my ($class, $time)=@_;
 	my $self = bless ({}, $class);
-	
+
+	# set some non-date properties
+	$self->{'formats'} = {};
+	$self->{'settings'} = {'dst_kludge' => 1};
+
+
 	# if clone
 	if (ref($time))
 		{@{$self}{'sec','min','hour','dayofmonth','monthnum','year','weekdaynum','yearday','dst', 'epochsec'}=@{$time}}
@@ -203,7 +225,9 @@ sub STORE {
 	
 	# hour and minute
 	elsif ( ($key eq 'clocktime') || ($key eq 'miltime') ) {
+		
 		my ($changed, $hour, $min, $sec) = gettime($val);
+
 		
 		unless (defined $hour)
 			{$hour = $self->{'hour'}}
@@ -276,7 +300,35 @@ sub STORE {
 		{$self->setfromtime($self->{'epochsec'} - ($self->getepochhour * t_60_60) + ($val * t_60_60) )}
 	
 	elsif ($key eq 'epochday') {
+		my ($oldhour, $oldmin);
+		
+		# kludge issues with DST
+		if ($self->{'settings'}->{'dst_kludge'}) {
+			$oldhour = $self->{'hour'};
+			$oldmin = $self->{'min'};
+		}
+		
 		$self->setfromtime($self->{'epochsec'} - ($self->getepochday * t_60_60_24) + (int($val) * t_60_60_24) );
+		# $self->setfromtime($self->{'epochsec'} - ($self->getepochday * t_60_60_24) + ($val * t_60_60_24) );
+		
+		# kludge issues with DST
+		if (
+			$self->{'settings'}->{'dst_kludge'} && 
+			($oldhour != $self->{'hour'})
+			) {
+			# spring forward
+			if (($oldhour == 0) && ($self->{'hour'} == 1)) 
+				{$self->setfromtime($self->{'epochsec'} - t_60_60)}
+			
+			# fall back
+			elsif (($oldhour == 0) && ($self->{'hour'} == 23)) 
+				{$self->setfromtime($self->{'epochsec'} + t_60_60)}
+			
+			# else die
+			else
+				{die 'unable to handle epochday++ for date'}
+		}
+
 	}
 	
 	elsif ($key eq 'year') {
@@ -331,7 +383,7 @@ sub STORE {
 
 		$cepoch = $self->{'epochsec'};
 
-		# TESTING
+		
 		my $sanity = 1000;
 
 		# loop until we get to this day in next or previous month
@@ -339,7 +391,7 @@ sub STORE {
 			my ($newdaynum, $newmonthnum);
 			$cepoch = $cepoch + (t_60_60_24 * $i);
 			
-			# TESTING
+			
 			if ($sanity-- <= 0)
 				{die 'INSANE'}
 
@@ -714,7 +766,6 @@ sub FETCH {
 sub isleapyear {
 	my ($year) = @_;
 
-	# TESTING
 	unless (defined $year)
 		{croak 'got undefined year'}
 	
@@ -730,9 +781,6 @@ sub isleapyear {
 sub getepochday {
 	my ($self) = @_;
 
-	# TESTING
-	#return int($self->{'epochsec'} / t_60_60_24);
-	
 	return int( ($self->{'epochsec'} + ${Date::EzDate::offset} ) / t_60_60_24);
 }
 
@@ -789,7 +837,7 @@ sub timefromfull {
 		# remove weekday
 		$val =~ s/((sun)|(mon)|(tue)|(wed)|(thu)|(fri)|(sat))\s*//;
 		$val =~ s/\s*$//;
-		
+
 		# attempt to get time
 		unless ($opts{'dateonly'}) {
 			($val, $hour, $min, $sec) = gettime($val, 'skipjustdigits'=>1);
@@ -806,7 +854,7 @@ sub timefromfull {
 		
 		# attempt to get time again
 		unless ($opts{'dateonly'}) {
-			if (length($val) && (! defined $hour) ) {
+			if (length($val) && (! defined($hour)) ) {
 				($val, $hour, $min, $sec) = gettime($val, 'skipjustdigits'=>1, 'croakonfail'=>1);
 			}
 		}
@@ -927,12 +975,17 @@ sub gettime {
 	my ($str, %opts)= @_;
 	my ($hour, $min, $sec);
 
+
 	# clean up a little
 	$str =~ s/^://;
 	$str =~ s/:$//;
-	
+
+
 	# 5:34:13 pm
-	if ($str =~ s/^(\d+):(\d+):(\d+) (a|p)m{0,1}\s*//) {
+	# 5:34:13 p
+	#if ($str =~ s/^(\d+):(\d+):(\d+) (a|p)m{0,1}\s*//) {
+	if ($str =~ s/^(\d+):(\d+):(\d+) (a|p)(m|\b)\s*//) {
+
 		$hour = ampmhour($1, $4);
 		$min = $2;
 		$sec = $3;
@@ -940,6 +993,7 @@ sub gettime {
 	
 	# 17:34:13
 	elsif ($str =~ s/^(\d+):(\d+):(\d+)\s*//) {
+
 		$hour = $1;
 		$min = $2;
 		$sec = $3;
@@ -972,7 +1026,8 @@ sub gettime {
 	elsif ($opts{'croakonfail'}) {
 		croak "don't recognize time format: $str";
 	}
-	
+
+
 	return ($str, $hour, $min, $sec);
 }
 
