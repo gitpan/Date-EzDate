@@ -14,17 +14,17 @@ use overload
 
 
 # version
-$VERSION = '1.02';
+$VERSION = '1.04';
 
 # constants and globals
 use constant WARN_NONE => 0;
 use constant WARN_STDERR => 1;
 use constant WARN_CROAK => 2;
-$default_warning = 1;
+$default_warning = WARN_STDERR;
 $compare = 'epochday';
 
 # psuedo-constants
-@ltimefields = 	('sec','min','hour','dayofmonth','monthnum','year','weekdaynum','yearday','dst');
+@ltimefields = 	qw[sec min hour dayofmonth monthnum year weekdaynum yearday dst];
 
 
 #========================================================================================
@@ -183,6 +183,7 @@ use Carp 'croak', 'carp';
 use Tie::Hash;
 use Time::Local;
 # use Dev::ShowStuff ':all';
+use re 'taint';
 
 
 use vars qw(
@@ -195,9 +196,12 @@ use vars qw(
 	@WeekDayLong 
 	@WeekDayLong 
 	@WeekDayShort 
+	@DayOfMonthRd
 	%PCodes
 	$pcode
 	$epoch_day_offset
+	@OrdWords $OrdWordsRx %OrdWordsNums
+	@OrdNums $OrdNumsRx
 	);
 
 @ISA = ('Tie::StdHash');
@@ -211,6 +215,20 @@ use vars qw(
 @MonthDays = qw[31 x 31 30 31 30 31 31 30 31 30 31];
 @WeekDayNums{qw[sun mon tue wed thu fri sat]}=(0..6);
 @MonthNums{qw[jan feb mar apr may jun jul aug sep oct nov dec]}=(0..11);
+
+
+# ordinals
+@OrdWords = qw[Zeroth First Second Third Fourth Fifth Sixth Seventh Eighth Ninth
+	Tenth Eleventh Twelfth Thirteenth Fourteenth Fifteenth Sixteenth Seventeenth Eighteenth Ninteenth
+	Twentieth Twentyfirst Twentysecond Twentythird Twentyfourth Twentyfifth Twentysixth Twentyseventh
+	Twentyeighth Twentyninth Thirtieth Thirtyfirst];
+$OrdWordsRx = '\b(' . join('|', @OrdWords[1..$#OrdWords]) . ')\b';
+foreach my $i (1..$#OrdWords)
+	{$OrdWordsNums{lc($OrdWords[$i])} = $i}
+@OrdNums = qw[0th 1st 2nd 3rd 4th 5th 6th 7th 8th 9th
+	10th 11th 12th 13th 14th 15th 16th 17th 18th 19th
+	20th 21st 22nd 23rd 24th 25th 26th 27th
+	28th 29th 30th 31st];
 
 # percent code regex
 $pcode = '^\%[\w\%]$';
@@ -293,11 +311,8 @@ sub TIEHASH {
 
 sub setfromtime {
 	my ($self, $time) = @_;
-	
 	$self->{'epochsec'} = $time;
-	
 	@{$self}{@Date::EzDate::ltimefields}=localtime($time);
-	
 	$self->{'year'} += 1900;
 }
 
@@ -318,11 +333,8 @@ sub format_split {
 	my @rv = split(m/(\{[^\{\}]*\}|\%.)/, $_[0]);
 	
 	foreach my $el (@rv) {
-		if ($el =~ m|^\{.*\}$|s) {
-			$el =~ s|\s||gs;
-			$el =~ tr/A-Z/a-z/;
-			$el =~ s/minute\}$/min}/ or $el =~ s/second\}$/sec}/;
-		}
+		if ($el =~ m|^\{.*\}$|s)
+			{normalize_key($el)}
 	}
 	
 	return \@rv;
@@ -346,11 +358,22 @@ sub warn {
 }
 
 #========================================================================================
+sub normalize_key {
+	$_[0] =~ s|\s||gs;
+	$_[0] =~ tr/A-Z/a-z/ unless $_[0] =~ m|^\%\w$|;
+	$_[0] =~ s|ordinal|ord|sg;
+	$_[0] =~ s|minute|min|sg;
+	$_[0] =~ s|second|sec|sg;
+	$_[0] =~ s|number|num|sg;
+}
+
+#========================================================================================
 
 sub STORE {
 	my ($self, $key, $val) = @_;
 	my $orgkey = $key;
 	my $orgval = $val;
+
 	
 	# error checking
 	if (! defined $val)
@@ -360,13 +383,14 @@ sub STORE {
 	$val =~ m|[\{\%]| and return $self->set_format($key, $val);
 	
 	# clean a little
-	($key =~ s|minute$|min|s) or ($key =~ s|second$|sec|s);
+	normalize_key($key);
 	
 	# get key from aliases if necessary
 	$key = $self->get_alias($key, 'strip_no_zero'=>1);
+
 	
 	# dayofmonth, weekdaynum, yearday
-	if ($key =~ m/^(dayofmonth)|(weekdaynum)|(yearday)$/) {
+	if ($key =~ m/^(dayofmonth|weekdaynum|yearday)$/s) {
 		# warn if setting day of month greater than month has days
 		if ( 
 			($key eq 'dayofmonth') && 
@@ -377,7 +401,6 @@ sub STORE {
 		
 		$self->setfromtime($self->{'epochsec'} - ($self->{$key} *  t_60_60_24) + ($val * t_60_60_24) );
 	}
-	
 	
 	elsif ($key eq 'sec')
 		{$self->setfromtime($self->{'epochsec'} - $self->{'sec'} + $val)}
@@ -392,7 +415,7 @@ sub STORE {
 		{$self->setfromtime($self->{'epochsec'} - ($self->{'hour'} * t_60_60) + ($val * t_60_60) )}
 	
 	# hour and minute
-	elsif ( ($key eq 'clocktime') || ($key eq 'miltime') ) {	
+	elsif ( ($key eq 'clocktime') || ($key =~ m|^mil(itary)?time$|) ) {	
 		my ($changed, $hour, $min, $sec) = $self->gettime($val);
 		
 		unless (defined $hour)
@@ -506,6 +529,26 @@ sub STORE {
 
 	}
 
+	# ordinals
+	elsif ($key =~ m/dayofmonthord(word|num)?/) {
+		# if numeric
+		if ($val =~ s|^(\d+)\s*\w*$|$1|s)
+			{$self->STORE('dayofmonth', $val)}
+		
+		# else word
+		else {
+			my $nval = $val;
+			$nval =~ tr/A-Z/a-z/;
+			$nval =~ s|\W||gs;
+		
+			# if no such ordinal exists
+			unless ($nval = $OrdWordsNums{$nval})
+				{return $self->warn("Invalid ordinal: $val")}
+			
+			$self->STORE('dayofmonth', $nval);
+		}
+	}
+	
 	elsif ($key eq 'year') {
 		my ($maxday, $targetday);
 		
@@ -658,10 +701,7 @@ sub FETCH {
 	
 	
 	# clean up key
-	unless ($opts{'normalized'}) {
-		$key =~ tr/A-Z/a-z/;
-		$key =~ s/minute$/min/ or $key =~ s/second$/sec/;
-	}
+	$opts{'normalized'} or normalize_key($key);
 	
 	
 	# already or mostly calculated
@@ -675,6 +715,12 @@ sub FETCH {
 	# nozero's
 	if ($key =~ s/no(zero|0)//)
 		{return $self->FETCH($key) + 0}
+	
+	# day of month ord
+	if ($key =~ m|^dayofmonthord(word)?$|)
+		{return $OrdWords[$self->{'dayofmonth'}]}
+	if ($key eq 'dayofmonthordnum')
+		{return $OrdNums[$self->{'dayofmonth'}]}
 	
 	# weekday
 	if ($key =~ m/^(weekdayshort|dayofweek)$/)
@@ -730,7 +776,7 @@ sub FETCH {
 	}
 	
 	# military time, aka "miltime"
-	if ($key eq 'miltime') 
+	if ($key =~ m|^mil(itary)?time$|)
 		{return zeropad($self->{'hour'}) . zeropad($self->{'min'}) }
 	
 	# minuteofday, aka minofday
@@ -866,7 +912,6 @@ sub daysinmonth {
 }
 
 #========================================================================================
-# timefromfull
 sub timefromfull {
 	my ($self, $val, %opts) = @_;
 	my ($hour, $min, $sec, $day, $month, $year);
@@ -887,12 +932,23 @@ sub timefromfull {
 	$val =~ tr/A-Z/a-z/;
 	$val =~ s/[^\w:]/ /g;
 	$val =~ s/\s*:\s*/:/g;
+	
+	# change ordinals to numbers
+	$val =~ s|$OrdWordsRx|$OrdWordsNums{$1}|gis;
+	$val =~ s/(\d)(th|rd|st|nd)\b/$1/gis;
+	
+	# noon to 12:00:00
+	# midnight to 00:00:00
+	$val =~ s/\bnoon\b/ 12:00:00 /gis;
+	$val =~ s/\bmidnight\b/ 00:00:00 /gis;
+	
+	# normalize some more
 	$val =~ s/(\d)([a-z])/$1 $2/g;
 	$val =~ s/([a-z])(\d)/$1 $2/g;
 	$val =~ s/\s+/ /g;
 	$val =~ s/^\s*//;
 	$val =~ s/\s*$//;
-
+	
 	# today, tomorrow, and yesterday
 	if ( ($val eq 'today') || ($val eq 'now') )
 		{return time()}
@@ -900,9 +956,9 @@ sub timefromfull {
 		{return time() + t_60_60_24}
 	if ($val eq 'yesterday')
 		{return time() - t_60_60_24}
-
-	# normalize futher
-	$val =~ s/([a-z]{3})[a-z]+/$1/g;
+	
+	# normalize further
+	$val =~ s/([a-z]{3})[a-z]+/$1/gs;
 	
 	# remove weekday
 	$val =~ s/((sun)|(mon)|(tue)|(wed)|(thu)|(fri)|(sat))\s*//;
@@ -1458,6 +1514,19 @@ all the same:
 	WeekDay Long
 	Wee Kdaylong  # makes no sense, but hey, it's your code
 
+Also, certain words can always be abbreviated.  
+
+	minute  ==  min
+	second  ==  sec
+	number  ==  num
+	ordinal ==  num
+
+So, for example, the following two properties are the same:
+
+	$mydate->{'minute of day'};
+	$mydate->{'min of day'};
+
+
 =head2 Basic properties
 
 All of these properties are both readable and writable.  Where there might be some confusion 
@@ -1469,7 +1538,7 @@ about what happens if you assign to the property more detail is given.
 
 Hour in 24 hour clock, 00 to 23.  Two digits, with a leading zero where necessary.
 
-=item ampmhour
+=item ampm hour
 
 Hour in twelve hour clock, 0 to 12.  Two digits, with a leading zero where necessary.
 
@@ -1478,9 +1547,9 @@ Hour in twelve hour clock, 0 to 12.  Two digits, with a leading zero where neces
 I<am> or I<pm> as appropriate.  Returns lowercase.  If you set this property the object will adjust to the
 same day and same hour but in I<am> or I<pm> as you set.
 
-=item ampmuc, ampmlc
+=item ampm uc, ampm lc
 
-ampmuc returns I<AM> or I<PM> uppercased.  ampmlc returns I<am> or I<pm> lowercased.  
+C<ampm uc> returns I<AM> or I<PM> uppercased.  C<ampm lc> returns I<am> or I<pm> lowercased.  
 
 
 =item min, minute
@@ -1491,36 +1560,41 @@ Minute, 00 to 59.  Two digits, with a leading zero where necessary.
 
 Second, 00 to 59.  Two digits, with a leading zero where necessary.
 
-=item weekdaynum
+=item weekday number
 
 Number of the weekday.  This number is zero-based, so Sunday is 0, Monday is 1, etc. 
 If you assign to this property the object will reset the date to the assigned
 weekday of the same week.  So, for example, if the object represents 
 Saturday Apr 14, 2001, and you assign 1 (Monday) to I<weekdaynum>:
 
- $mydate->{'weekdaynum'} = 1;
+ $mydate->{'weekday number'} = 1;
 
 Then the object will adjust to Monday Apr 9, 2001.
 
-=item weekdayshort
+=item weekday short
 
 First three letters of the weekday.  I<Sun>, I<Mon>, I<Tue>, etc.  If you assign 
 to this property the object will adjust to that day in the same week.  When you assign 
 to this property EzDate actually only pays attention to the first three letters and 
 ignores case, so I<SUNDAY> would a valid assignment.
 
-=item weekdaylong
+=item weekday long
 
 Full name of the weekday.  If you assign to this property the object will adjust to the 
 day in the same week.  When you assign to this property EzDate actually only pays attention 
 to the first three letters and ignores case, so I<SUN> would a valid assignment.
 
-=item dayofmonth
+=item day of month
 
 The day of the month.  If you assign to this property the object adjusts to the day in the 
 same month.
 
-=item monthnum
+=item day of month ordinal word, day of month ordinal number
+
+The day of month expressed as either an ordinal word (e.g. "Third") or as an ordinal number
+(e.g. "3rd").
+
+=item month number
 
 Zero-based number of the month.  January is 0, February is 1, etc. If you assign to this 
 property the object will adjust to the same month-day in the assigned month.  If the 
@@ -1528,21 +1602,21 @@ current day is greater than allowed in the assigned month then the day will adju
 the maximum day of the assigned month.  So, for example, if the object is set to 
 31 Dec 2001 and you assign the month to February (1):
 
-  $mydate->{'monthnum'} = 1;
+  $mydate->{'month number'} = 1;
 
-Then I<dayofmonth> will be set to 28.
+Then I<day of month> will be set to 28.
 
-=item monthnumbase1
+=item month number base 1
 
 1 based number of the month for those of us who are used to thinking of January as 1, 
 February as 2, etc.  Can be assigned to.
 
-=item monthshort
+=item month short
 
 First three letters of the month.  Can be assigned to.  Case insensitive in the assignment, 
 so "JANUARY" would be a valid assignment.
 
-=item monthlong
+=item month long
 
 Full name of the month.  Can be assigned to.  In the assignment, EzDate only 
 pays attention to the first three letters and ignores case.
@@ -1551,17 +1625,17 @@ pays attention to the first three letters and ignores case.
 
 Year of the date the object represents.
 
-=item yeartwodigits
+=item year two digits
 
 The last two digits of the year.  If you assign to this property, EzDate assumes you mean to 
 use the same first two digits.  Therefore, if the current date of the object is 1994 and you assign 
 '12' then the year will be 1912... quite possibly not what you intended.  
 
-=item dayofyear
+=item day of year
 
 Zero-based Number of days into the year of the date.  C<yearday> does the same thing.
 
-=item dayofyearbase1
+=item day of year base1
 
 One-based number of days into the year of the date.  C<yeardaybase1> does the same thing.
 
@@ -1575,11 +1649,18 @@ formats that EzDate can't understand.  When I've found one, I've modified the co
 accomodate it.  If you have some reasonably unambiguous date format that EzDate is unable 
 to parse correctly, please send it to me.  I<-Miko>
 
+When assigning a full date/time string, you can use 'noon' and 'midnight' to indicate
+specific times.  So, for example, this string indicates July 25, 2003 and noon:
+
+	$mydate = Date::EzDate->new('July 23 2003 noon');
+	print $mydate->{'full'}; # outputs Wed Jul 23, 2003 12:00:00
+
+
 =item dmy
 
 The day, month and year representation of the date, e.g. C<03JUN2004>.
 
-=item miltime
+=item military time, miltime
 
 The time formatted as HHMM on a 24 hour clock.  For example, 2:20 PM is 1420.
 
@@ -1587,7 +1668,7 @@ The time formatted as HHMM on a 24 hour clock.  For example, 2:20 PM is 1420.
 
 The time formatted as HH::MM AM/PM.
 
-=item minofday
+=item minute of day
 
 How many minutes since midnight.  Useful for doing math with times in a day.
 
@@ -1601,19 +1682,19 @@ both readable and writable.
 
 =over
 
-=item epochsecond
+=item epoch second
 
 The basic Perl epoch integer.
 
-=item epochhour
+=item epoch hour
 
 How many hours since the epoch.  
 
-=item epochminute
+=item epoch minute
 
 How many minutes since the epoch.  
 
-=item epochday
+=item epoch day
 
 How many days since the epoch.
 
@@ -1627,11 +1708,11 @@ The following properties are read-only and will crash if you try to assign to th
 
 =over
 
-=item leapyear
+=item is leap year
 
-True if the year is a leap year.
+True if the year is a leap year. The "is" part is optional.
 
-=item daysinmonth
+=item days in month
 
 How many days in the month.
 
@@ -1644,9 +1725,9 @@ of course, do this by getting each property individually and concatenating them 
 want to get the date in the format I<Monday, June 10, 2002>.  You could build that string like this:
     
   $str = 
-    $date->{'weekdaylong'} . ', ' . 
-    $date->{'monthlong'} . ' ' . 
-    $date->{'dayofmonth'} . ', ' . 
+    $date->{'weekday long'} . ', ' . 
+    $date->{'month long'} . ' ' . 
+    $date->{'day of month'} . ', ' . 
     $date->{'year'};
 
 That's a lot of typing, however, and it's difficult to tell from the code what the final string will
@@ -1786,6 +1867,8 @@ EzDate is probably not a good choice for handling dates before 1970.
 
 The following list itemizes features I'd like to add to EzDate.  
 
+=over 
+
 =item Time zone properties
 
 The current version does not address time zone issues.  Frankly, I haven't been able to 
@@ -1900,6 +1983,12 @@ Also made a few minor not-so-backward-compatible changes:
 - Made not-backward-compatible change to the C<full> format.
 
 - Improved efficiency of custom formats
+
+=item Version 1.04    Sep 03, 2002
+
+- Added ordinals
+
+- Added "noon" and "midnight" keywords.
 
 =back
 

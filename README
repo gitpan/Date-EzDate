@@ -1,4 +1,4 @@
-Date/EzDate version 1.02
+Date/EzDate version 1.04
 ========================
 
 NAME
@@ -333,6 +333,18 @@ PROPERTIES
             WeekDay Long
             Wee Kdaylong  # makes no sense, but hey, it's your code
 
+    Also, certain words can always be abbreviated.
+
+            minute  ==  min
+            second  ==  sec
+            number  ==  num
+            ordinal ==  num
+
+    So, for example, the following two properties are the same:
+
+            $mydate->{'minute of day'};
+            $mydate->{'min of day'};
+
   Basic properties
 
     All of these properties are both readable and writable. Where there
@@ -343,7 +355,7 @@ PROPERTIES
         Hour in 24 hour clock, 00 to 23. Two digits, with a leading zero
         where necessary.
 
-    ampmhour
+    ampm hour
         Hour in twelve hour clock, 0 to 12. Two digits, with a leading zero
         where necessary.
 
@@ -352,9 +364,9 @@ PROPERTIES
         property the object will adjust to the same day and same hour but in
         *am* or *pm* as you set.
 
-    ampmuc, ampmlc
-        ampmuc returns *AM* or *PM* uppercased. ampmlc returns *am* or *pm*
-        lowercased.
+    ampm uc, ampm lc
+        "ampm uc" returns *AM* or *PM* uppercased. "ampm lc" returns *am* or
+        *pm* lowercased.
 
     min, minute
         Minute, 00 to 59. Two digits, with a leading zero where necessary.
@@ -362,35 +374,39 @@ PROPERTIES
     sec, second
         Second, 00 to 59. Two digits, with a leading zero where necessary.
 
-    weekdaynum
+    weekday number
         Number of the weekday. This number is zero-based, so Sunday is 0,
         Monday is 1, etc. If you assign to this property the object will
         reset the date to the assigned weekday of the same week. So, for
         example, if the object represents Saturday Apr 14, 2001, and you
         assign 1 (Monday) to *weekdaynum*:
 
-         $mydate->{'weekdaynum'} = 1;
+         $mydate->{'weekday number'} = 1;
 
         Then the object will adjust to Monday Apr 9, 2001.
 
-    weekdayshort
+    weekday short
         First three letters of the weekday. *Sun*, *Mon*, *Tue*, etc. If you
         assign to this property the object will adjust to that day in the
         same week. When you assign to this property EzDate actually only
         pays attention to the first three letters and ignores case, so
         *SUNDAY* would a valid assignment.
 
-    weekdaylong
+    weekday long
         Full name of the weekday. If you assign to this property the object
         will adjust to the day in the same week. When you assign to this
         property EzDate actually only pays attention to the first three
         letters and ignores case, so *SUN* would a valid assignment.
 
-    dayofmonth
+    day of month
         The day of the month. If you assign to this property the object
         adjusts to the day in the same month.
 
-    monthnum
+    day of month ordinal word, day of month ordinal number
+        The day of month expressed as either an ordinal word (e.g. "Third")
+        or as an ordinal number (e.g. "3rd").
+
+    month number
         Zero-based number of the month. January is 0, February is 1, etc. If
         you assign to this property the object will adjust to the same
         month-day in the assigned month. If the current day is greater than
@@ -398,20 +414,20 @@ PROPERTIES
         maximum day of the assigned month. So, for example, if the object is
         set to 31 Dec 2001 and you assign the month to February (1):
 
-          $mydate->{'monthnum'} = 1;
+          $mydate->{'month number'} = 1;
 
-        Then *dayofmonth* will be set to 28.
+        Then *day of month* will be set to 28.
 
-    monthnumbase1
+    month number base 1
         1 based number of the month for those of us who are used to thinking
         of January as 1, February as 2, etc. Can be assigned to.
 
-    monthshort
+    month short
         First three letters of the month. Can be assigned to. Case
         insensitive in the assignment, so "JANUARY" would be a valid
         assignment.
 
-    monthlong
+    month long
         Full name of the month. Can be assigned to. In the assignment,
         EzDate only pays attention to the first three letters and ignores
         case.
@@ -419,17 +435,17 @@ PROPERTIES
     year
         Year of the date the object represents.
 
-    yeartwodigits
+    year two digits
         The last two digits of the year. If you assign to this property,
         EzDate assumes you mean to use the same first two digits. Therefore,
         if the current date of the object is 1994 and you assign '12' then
         the year will be 1912... quite possibly not what you intended.
 
-    dayofyear
+    day of year
         Zero-based Number of days into the year of the date. "yearday" does
         the same thing.
 
-    dayofyearbase1
+    day of year base1
         One-based number of days into the year of the date. "yeardaybase1"
         does the same thing.
 
@@ -444,17 +460,24 @@ PROPERTIES
         have some reasonably unambiguous date format that EzDate is unable
         to parse correctly, please send it to me. *-Miko*
 
+        When assigning a full date/time string, you can use 'noon' and
+        'midnight' to indicate specific times. So, for example, this string
+        indicates July 25, 2003 and noon:
+
+                $mydate = Date::EzDate->new('July 23 2003 noon');
+                print $mydate->{'full'}; # outputs Wed Jul 23, 2003 12:00:00
+
     dmy The day, month and year representation of the date, e.g.
         "03JUN2004".
 
-    miltime
+    military time, miltime
         The time formatted as HHMM on a 24 hour clock. For example, 2:20 PM
         is 1420.
 
     clocktime
         The time formatted as HH::MM AM/PM.
 
-    minofday
+    minute of day
         How many minutes since midnight. Useful for doing math with times in
         a day.
 
@@ -463,16 +486,16 @@ PROPERTIES
     The following properties allow you to do date calculations at different
     granularities. All of these properties are both readable and writable.
 
-    epochsecond
+    epoch second
         The basic Perl epoch integer.
 
-    epochhour
+    epoch hour
         How many hours since the epoch.
 
-    epochminute
+    epoch minute
         How many minutes since the epoch.
 
-    epochday
+    epoch day
         How many days since the epoch.
 
   Read-only properties
@@ -480,10 +503,10 @@ PROPERTIES
     The following properties are read-only and will crash if you try to
     assign to them.
 
-    leapyear
-        True if the year is a leap year.
+    is leap year
+        True if the year is a leap year. The "is" part is optional.
 
-    daysinmonth
+    days in month
         How many days in the month.
 
 CUSTOM FORMATS
@@ -494,9 +517,9 @@ CUSTOM FORMATS
     2002*. You could build that string like this:
 
       $str = 
-        $date->{'weekdaylong'} . ', ' . 
-        $date->{'monthlong'} . ' ' . 
-        $date->{'dayofmonth'} . ', ' . 
+        $date->{'weekday long'} . ', ' . 
+        $date->{'month long'} . ' ' . 
+        $date->{'day of month'} . ', ' . 
         $date->{'year'};
 
     That's a lot of typing, however, and it's difficult to tell from the
@@ -643,40 +666,42 @@ TO DO
     The following list itemizes features I'd like to add to EzDate.
 
     Time zone properties
-    The current version does not address time zone issues. Frankly, I
-    haven't been able to figure out how best to deal with them. I'd like a
-    system where the object knows what time zone it's in and if it's
-    daylight savings time. Changing to another time zone changes the other
-    properties such that the object is in the same moment in time in the new
-    time zone and it was in the old time zone. For example, if the object
-    represents 5pm in the Eastern Time Zone (e.g. where New York City is)
-    and its time zone is changed to Pacific Time (e.g. where Los Angeles is)
-    then the object would have a time of 2pm.
+        The current version does not address time zone issues. Frankly, I
+        haven't been able to figure out how best to deal with them. I'd like
+        a system where the object knows what time zone it's in and if it's
+        daylight savings time. Changing to another time zone changes the
+        other properties such that the object is in the same moment in time
+        in the new time zone and it was in the old time zone. For example,
+        if the object represents 5pm in the Eastern Time Zone (e.g. where
+        New York City is) and its time zone is changed to Pacific Time (e.g.
+        where Los Angeles is) then the object would have a time of 2pm.
 
     Assignment based on format
-    Right now the formatted string feature is read-only. It might be useful
-    if the date could be assigned based on a format. So, for example, you
-    could set the date as Nov 1, 2001 like this:
+        Right now the formatted string feature is read-only. It might be
+        useful if the date could be assigned based on a format. So, for
+        example, you could set the date as Nov 1, 2001 like this:
 
-      $mydate->{'%h %d %Y'} = 'Nov 1 2001';
+          $mydate->{'%h %d %Y'} = 'Nov 1 2001';
 
-    This would come in handy when dealing with weirdly formatted dates.
-    However, EzDate is already quite robust about handling weirdly formatted
-    dates, so this feature is not as pressingly needed as it might seem.
+        This would come in handy when dealing with weirdly formatted dates.
+        However, EzDate is already quite robust about handling weirdly
+        formatted dates, so this feature is not as pressingly needed as it
+        might seem.
 
     Next weekday
-    I'd like a function for moving the date forward (or backward) to the
-    next (previous) day of a week.
+        I'd like a function for moving the date forward (or backward) to the
+        next (previous) day of a week.
 
     Time span object
-    An EzDate object represents a point in time. I'd also like to have an
-    object that represents a span of time. For example, a span object could
-    represent "2 days, 3 hours, 18 seconds". An object like that could then
-    be used for calculating the difference between two dates.
+        An EzDate object represents a point in time. I'd also like to have
+        an object that represents a span of time. For example, a span object
+        could represent "2 days, 3 hours, 18 seconds". An object like that
+        could then be used for calculating the difference between two dates.
 
-    The chief difficulty is in designing how to represent leap years. A time
-    span of "2 years" might represent different numbers of days depending on
-    whether or not the 2 years happen to include a leap day.
+        The chief difficulty is in designing how to represent leap years. A
+        time span of "2 years" might represent different numbers of days
+        depending on whether or not the 2 years happen to include a leap
+        day.
 
 TERMS AND CONDITIONS
     Copyright (c) 2001-2002 by Miko O'Sullivan. All rights reserved. This
@@ -743,4 +768,9 @@ VERSION
         - Made not-backward-compatible change to the "full" format.
 
         - Improved efficiency of custom formats
+
+    Version 1.04 Sep 03, 2002
+        - Added ordinals
+
+        - Added "noon" and "midnight" keywords.
 
