@@ -1,4 +1,4 @@
-Date/EzDate version 1.04
+Date/EzDate version 1.06
 ========================
 
 NAME
@@ -115,11 +115,11 @@ STRINGIFICATION
             $date = Date::EzDate->new();
             print $date, "\n";
 
-    The object stringifies to its "full" format, so if you want to change
-    how it stringifies simply change the "full" format. For example, the
+    The object stringifies to its "default" format, so if you want to change
+    how it stringifies simply change the "default" format. For example, the
     following code outputs a string like "September 3, 2002":
 
-            $date->{'full'} = '{month long} {day of month no zero} {year}';
+            $date->{'default'} = '{month long} {day of month no zero} {year}';
             print $date, "\n";
 
 COMPARISON
@@ -154,12 +154,17 @@ COMPARISON
     By default, the comparison is done on the "epochday" property, so two
     EzDate objects that have the same date but different times will be
     considered the same. If you want to compare based on some other
-    property, set $Date::EzDate::compare to the name of the property to
+    property, set $Date::EzDate::overload to the name of the property to
     compare. For example, the following code sets the comparison property to
     "epoch second", meaning that two date/times are considered the same only
     if they are identical down to the second:
 
             $date = Date::EzDate->new('January 3, 2001');
+
+    *PLEASE NOTE*: $Date::EzDate::overload used to be named
+    $Date::EzDate::compare. I made a non-backwards compatible change to
+    "overload" because the same variable is now being used for
+    non-comparison overloads like addition and subtraction.
 
   Comparing Properties
 
@@ -173,6 +178,31 @@ COMPARISON
             if ($date->{'day of week'} eq $otherdate->{'day of week'}) {
                     ...
             }
+
+OVERLOADED ADDITION AND SUBTRACTION
+    You can do basic addition and subtraction on EzDate objects to adjust
+    the "epoch day" property (or whatever property is indicated by the
+    "$Date::EzDate::overload" variable). For example, to increment the day
+    of the object, simply increment it with "++" like a number. For example,
+    the following code moves the day from Jan 31, 2003 to Feb 1, 2003:
+
+      my $date = Date::EzDate->new('Jan 31, 2003');
+      print $date, "\n";  # outputs Fri Jan 31, 2003 16:05:27
+      $date++;
+      println $date;      # outputs Sat Feb 1, 2003 16:05:27
+
+    You can also move by more than one day with + or +=. These two commands
+    do the same thing:
+
+      $date = $date + 3;
+      $date += 3;    
+
+    Subtraction works the same way. All of these commands move the object
+    one day backwards:
+
+      $date = $date - 1;
+      $date -= 1;
+      $date--;
 
 METHODS
   new([*date string*])
@@ -659,8 +689,9 @@ LIMITATIONS, KNOWN/SUSPECTED BUGS
     kludgly fixed but which I haven't been able to properly solve.
 
     EzDate is entirely based on the "localtime()" and "timelocal()"
-    functions, so it inherits their limitations. EzDate is probably not a
-    good choice for handling dates before 1970.
+    functions, so it inherits their limitations. On my computer that means
+    it can't handle dates before Jan 1, 1902 or after Dec 31, 2037. Your
+    mileage may vary.
 
 TO DO
     The following list itemizes features I'd like to add to EzDate.
@@ -692,19 +723,24 @@ TO DO
         I'd like a function for moving the date forward (or backward) to the
         next (previous) day of a week.
 
-    Time span object
+    Time interval object
         An EzDate object represents a point in time. I'd also like to have
-        an object that represents a span of time. For example, a span object
-        could represent "2 days, 3 hours, 18 seconds". An object like that
-        could then be used for calculating the difference between two dates.
+        an object that represents an interval of time. For example, an
+        interval object could represent "2 days, 3 hours, 18 seconds". An
+        object like that could then be used for calculating the difference
+        between two dates.
 
-        The chief difficulty is in designing how to represent leap years. A
-        time span of "2 years" might represent different numbers of days
-        depending on whether or not the 2 years happen to include a leap
-        day.
+        I'm currently working on this feature.
+
+    Greater range of available dates
+        Currently EzDate inherits the limitations of localtime(), which
+        generally means it can't handle dates before about 1902 or after
+        about 2037. I'd like to stretch EzDate so it can handle a greater
+        range of dates. Ideally, it should handle dates from the Big Bang to
+        the Big Crunch, but let's start with recorded human history.
 
 TERMS AND CONDITIONS
-    Copyright (c) 2001-2002 by Miko O'Sullivan. All rights reserved. This
+    Copyright (c) 2001-2003 by Miko O'Sullivan. All rights reserved. This
     program is free software; you can redistribute it and/or modify it under
     the same terms as Perl itself. This software comes with NO WARRANTY of
     any kind.
@@ -773,4 +809,32 @@ VERSION
         - Added ordinals
 
         - Added "noon" and "midnight" keywords.
+
+    Version 1.05 Dec 11, 2002
+        - Added format yyyy-mm-dd
+
+        - Added feature that if Date::EzDate->new() is called with an
+        unrecognized format, then undef is returned. This allows you to
+        check formats for validity.
+
+        - Fixed off-by-one problem that occurred when, for example, moving
+        Jan 1, 2003 back one year to 2002
+
+    Version 1.06 Mar 11, 2003
+        - Non-backwards compatible change: changed $compare global to
+        $overload.
+
+        - Non-backwards compatible change: EzDate objects now stringify to
+        the "default" format instead of the "full" format.
+
+        - Added overloading of addition and subtraction.
+
+        - Added recognition of the following time format, which is used by
+        PostGreSql: 2003-02-13 12:35:49.480975-05
+
+        - Fixed bug in which days of DST changeover produced off-by-one
+        problem when setting hours.
+
+        - Fixed bug in which the epochday value for dates before the epoch
+        are off-by-one.
 

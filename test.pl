@@ -2,9 +2,10 @@
 use strict;
 use lib '../../';
 use Date::EzDate;
+use Carp 'confess', 'croak';
 use Test;
 
-BEGIN { plan tests => 22 };
+BEGIN { plan tests => 25 };
 
 # turn off warnings
 $Date::EzDate::default_warning = 0;
@@ -35,21 +36,21 @@ $date = Date::EzDate->new()
 # create with known date
 $date = Date::EzDate->new($jan31->{'in'})
 	or die "cannot create with $jan31->{'in'}";
-err_comp($date->{'full'}, $jan31->{'full'});
+err_comp($date->{'full'}, $jan31->{'full'}, '[1]');
 
 # a date in DDMMMYYYY format
 $date = Date::EzDate->new($jan31->{'dmy'})
 	or die "cannot create with $jan31->{'in'}";
-err_comp($date->{'dmy'}, $jan31->{'dmy'});
+err_comp($date->{'dmy'}, $jan31->{'dmy'}, '[2]');
 
 # a little forgiveness
 $date = Date::EzDate->new($jan31->{'funky'})
 	or die "cannot create with $jan31->{'funky'}";
-err_comp($date->{'full'}, $jan31->{'full'});
+err_comp($date->{'full'}, $jan31->{'full'}, '[3]');
 
 # clone
 $clone = $date->clone;
-err_comp($date->{'full'}, $clone->{'full'});
+err_comp($date->{'full'}, $clone->{'full'}, '[4]');
 
 }
 #
@@ -80,8 +81,8 @@ err_comp($date->{'full'}, $clone->{'full'});
 	
 	$orgstr = 'Sun Apr 26, 1970 00:00:07';
 	$mydate = Date::EzDate->new($orgstr);
-	
-	err_comp($orgstr, $mydate->{'full'}, 'full');
+
+	err_comp($orgstr, $mydate->{'full'}, 'full', '[5]');
 }
 # 
 # date parsing
@@ -129,15 +130,15 @@ $date = Date::EzDate->new($jan31->{'in'})
 
 # next_month: go forward two months to March
 $date->next_month(2);
-err_comp($date->{'Day of Month'}, '31');
+err_comp($date->{'Day of Month'}, '31', '[6]');
 
 # go back to Feb of 2000
 $date->next_month(-25);
-err_comp($date->{'Day of Month'}, '29');
+err_comp($date->{'Day of Month'}, '29', '[7]');
 
 # go forward to Feb of 2001
 $date->next_month(12);
-err_comp($date->{'Day of Month'}, '28');
+err_comp($date->{'Day of Month'}, '28', '[8]');
 
 }
 # 
@@ -163,7 +164,7 @@ $date = Date::EzDate->new($jan31->{'in'})
 $date->set_format($jan31->{'format'}->{'name'}, $jan31->{'format'}->{'pattern'});
 
 # check the format, using the same name but with different capitalization and spacing
-err_comp($date->{$jan31->{'format'}->{'name_changed'}}, $jan31->{'format'}->{'output'});
+err_comp($date->{$jan31->{'format'}->{'name_changed'}}, $jan31->{'format'}->{'output'}, '[9]');
 
 }
 #
@@ -184,10 +185,24 @@ err_comp($date->{$jan31->{'format'}->{'name_changed'}}, $jan31->{'format'}->{'ou
 		{ok 1}
 	else
 		{ok 0}
+
+
+	# overloaded addition
+	$date = Date::EzDate->new('January 31, 2003 1:05:07 am');
+	$date++;
+	err_comp($date->{'{month short} {day of month}, {year}'}, 'Feb 01, 2003',  'overloaded addition');
+	ok 1;
+	
+	# overloaded subtraction
+	$date--;
+	err_comp($date->{'{month short} {day of month}, {year}'}, 'Jan 31, 2003',  'overloaded subtraction');
+	ok 1;
+
 }
 #
 # operator overloads
 #------------------------------------------------------
+
 
 # check all properties
 check_all(Date::EzDate->new($jan31->{'in'}));
@@ -290,6 +305,7 @@ check_all(Date::EzDate->new($jan31->{'in'}));
 	$date->{'%S'} = 7;            # %S'} = 'sec';
 	check_all($date);
 	
+
 	# January 31, 2002 1:05:07 am Thu
 	$date = Date::EzDate->new('June 30, 2002 12:05:07 Pm');
 	$date->{'%h'} = 'JANUARY';   # %h'} = 'monthshort';
@@ -339,8 +355,30 @@ check_all(Date::EzDate->new($jan31->{'in'}));
 
 
 #------------------------------------------------------
+# check epoch days around the epoch
+# 
+{
+	my ($date, $control);
+	
+	$date = Date::EzDate->new('Jan 4, 1970 5pm');
+	$control = $date->{'epoch day'};
+	
+	foreach my $i (0..10) {
+		err_comp($date->{'epoch day'}, $control, 'check epoch days around the epoch');
+		$control--;
+		$date->{'epoch day'}--;
+	}
+
+	ok(1);
+}
+# 
+# check epoch days around the epoch
+#------------------------------------------------------
+
+
+#------------------------------------------------------
 # check all properties
-#
+# 
 sub check_all {
 	my ($date) = @_;
 	my ($alt);
@@ -352,18 +390,18 @@ sub check_all {
 	$alt->{'ampm'} = 'pm';
 	$alt->{'year'} = 2000;
 	
-	err_comp($date->{'hour'},      '01',  'hour');
-	err_comp($date->{'ampmhour'},  '01',  'ampmhour');
+	err_comp($date->{'hour'},      '01',  'hour', '[check_all: 1]');
+	err_comp($date->{'ampmhour'},  '01',  'ampmhour', '[check_all: 2]');
 	
 	# am/pm
-	err_comp($date->{'ampm'},      'am');
-	err_comp($date->{'ampm lc'},   'am');
-	err_comp($date->{'ampm uc'},   'AM');
+	err_comp($date->{'ampm'},      'am', '[check_all: 3]');
+	err_comp($date->{'ampm lc'},   'am', '[check_all: 4]');
+	err_comp($date->{'ampm uc'},   'AM', '[check_all: 5]');
 	
 	# minute
-	err_comp($date->{'min'}, $date->{'Minute'});
-	err_comp($date->{'min'}, '05');
-	err_comp($date->{'min no Zero'}, 5);
+	err_comp($date->{'min'}, $date->{'Minute'}, '[check_all: 6]');
+	err_comp($date->{'min'}, '05', '[check_all: 7]');
+	err_comp($date->{'min no Zero'}, 5, '[check_all: 8]');
 	
 	# second
 	err_comp($date->{'sec'}, $date->{'Second'});
@@ -399,12 +437,6 @@ sub check_all {
 	err_comp($date->{'miltime'}, '0105');
 	err_comp($alt->{'miltime'}, '1305');
 	err_comp($date->{'minofday'}, 65);
-
-	# epochs
-	# err_comp($date->{'epochsec'},   '1012457107');
-	# err_comp($date->{'epochmin'},   '16874285');
-	# err_comp($date->{'epochhour'},  '281238');
-	# err_comp($date->{'epochday'},   '11719');
 
 	# read-only's
 	err_comp($date->{'leapyear'},      '0');
@@ -464,7 +496,7 @@ sub err_comp {
 			"\tis:     $is\n",
 			"\tshould: $should\n\n";	
 		ok(0);
-		exit;
+		confess();
 	}
 }
 #
