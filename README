@@ -1,35 +1,573 @@
-Date/EzDate version 0.01
+Date/EzDate version 1.00
 ========================
 
-The README is used to introduce the module and provide instructions on
-how to install the module, any machine dependencies it may have (for
-example C compilers and installed libraries) and any other information
-that should be provided before the module is installed.
+NAME
+    Date::EzDate - Date and time manipulation made easy
 
-A README file is required for CPAN modules since CPAN extracts the
-README file from a module distribution so that people browsing the
-archive can use it get an idea of the modules uses. It is usually a
-good idea to provide version information here so that people can
-decide whether fixes for the module are worth downloading.
+SYNOPSIS
+    An EzDate object represents a single point in time and exposes all
+    properties of that point. EzDate has many features, here are a few:
+
+     use Date::EzDate;
+     my $mydate = Date::EzDate->new();
+
+     # output some date information
+     print $mydate->{'full'}, "\n";  # e.g. output:  09:06:26 Wed Apr 11, 2001
+
+     # go to next day
+     $mydate->{'epochday'}++;
+
+     # output some other date and time information
+     # e.g. output:  Thursday April 12, 2001 09:06 am
+     print
+            $mydate->{'weekdaylong'},   ' ',
+            $mydate->{'monthlong'},     ' ',
+            $mydate->{'dayofmonth'},    ', ',
+            $mydate->{'year'},          ' ',
+            $mydate->{'ampmhour'},      ':',
+            $mydate->{'min'},           ' ',
+            $mydate->{'ampm'},          "\n";
+
+     # go to Monday of same week, but be lazy and don't spell out 
+     # the whole day or case it correctly
+     $mydate->{'weekdaylong'} = 'MON';
+
+     print $mydate->{'full'}, "\n";  # e.g. output:  09:06:26 Mon Apr 09, 2001
+
+     # go to previous year
+     $mydate->{'year'}--;
+
+     print $mydate->{'full'}, "\n";  # e.g. output:  09:06:26 Sun Apr 09, 2000
 
 INSTALLATION
+    Date::EzDate can be installed with the usual routine:
 
-To install this module type the following:
+            perl Makefile.PL
+            make
+            make test
+            make install
 
-   perl Makefile.PL
-   make
-   make test
-   make install
+    You can also just copy EzDate.pm into the Date/ directory of one of your
+    library trees.
 
-DEPENDENCIES
+DESCRIPTION
+    Date::EzDate was motivated by the simple fact that I hate dealing with
+    date and time calculations, so I put all of them into a single
+    easy-to-use object. The main idea of EzDate is that the object
+    represents a specific date and time. A variety of properties tell you
+    information about that date and time such as hour, minute, day of month,
+    weekday, etc.
 
-This module requires these other modules and libraries:
+    The real power of EzDate is that you can assign to (almost) any of those
+    properties and EzDate will automatically rework the other properties to
+    produce a new valid date with the property you just assigned. Properties
+    that can be kept the same with the new value aren't changed, while those
+    that logically must change to accomodate the new value are recalculated.
+    For example, incrementing *epochday* by one (i.e. moving the date
+    forward one day) does not change the hour or minute but does change the
+    day of week.
 
-  blah blah blah
+    So, for example, suppose you want to get information about today, then
+    get information about tomorrow. That can be done using the *epochday*
+    property which is used for day-granularity calculations. Let's walk
+    through the steps:
 
-COPYRIGHT AND LICENCE
+    Load the module and instantiate the object
+         use Date::EzDate;
+         my $mydate = Date::EzDate->new();  # the object defaults to the current date and time
 
-Put the correct copyright and licence information here.
+    output all the basic information
+         # e.g. outputs:  11:11:40 Wed Apr 11, 2001
+         print $mydate->{'full'}, "\n";
 
-Copyright (C) 2002 A. U. Thor blah blah blah
+    set to tomorrow
+        To move the date forward one day we simply increment the *epochday*
+        property (number of days since the epoch). The time (i.e.
+        hour:min:sec) of the object does not change.
+
+         $mydate->{'epochday'}++;
+ 
+         # outputs:  11:11:40 Thu Apr 12, 2001
+         print $mydate->{'full'}, "\n";
+
+    This demonstrates the basic concept: almost any of the properties can be
+    set as well as read and EzDate will take care of resetting all other
+    properties as needed.
+
+METHODS
+    Almost everything EzDate does is through reading and setting properties,
+    so EzDate has few methods. Currently there is only one static method
+    ("new()") and two object methods ("clone()" and "next_month()").
+
+  new([*date string*])
+
+    Currently, EzDate only accepts a single optional argument when
+    instantiated. You may pass in either a Perl time integer or a string
+    formatted as DDMMMYYYY. If you don't pass in any argument then the
+    returned object represents the time and day at the moment it was
+    created.
+
+    The following are valid ways to instantiate an EzDate object:
+
+     # current date and time
+     my $date = Date::EzDate->new();
+ 
+     # a specific date and time
+     my $date = Date::EzDate->new('Jan 31, 2001');
+ 
+     # a date in DDMMMYYYY format
+     my $date = Date::EzDate->new('14JAN2003');
+ 
+     # a little forgiveness is built in (notice oddly place comma)
+     my $date = Date::EzDate->new('14 January, 2003');
+ 
+     # epoch second (23:27:39, Tue Apr 10, 2001 if you're curious) 
+     my $date = Date::EzDate->new(986959659);
+
+  $mydate->set_format($name, $format)
+
+    "set_format" allows you to specify a custom format for use later on. For
+    example, suppose you want a format of the form *Monday, June 10, 2002*.
+    You can specify that format using "set_format" like this:
+
+      $date->set_format('myformat', '{weekdaylong}, {monthlong} {dayofmonth}, {year}');
+      print $date->{'myformat'}, "\n";
+
+    Note that it's not necessary to store a custom format if you're only
+    going to use it once. If you wanted the format above, but just once, you
+    could output it like this:
+
+      print $date->{'{weekdaylong}, {monthlong} {dayofmonth}, {year}'};
+
+    To delete a custom format, "$mydate-"del_format($name)>. To get the
+    format string itself, use "$mydate-"get_format($name)>.
+
+    If you use the same custom format in a lot of different places in your
+    project, you might find it easier to create your own customer
+    super-class of Date::EzDate so that you can set the custom formats in
+    one place. See "Super-classing Date::EzDate" below.
+
+  $mydate->clone()
+
+    This method returns an EzDate object exactly like the object it was
+    called from. "clone" is much cheaper than creating a new EzDate object
+    and then setting the new object to have the same properties as another
+    EzDate object.
+
+  $mydate->next_month([integer])
+
+    EzDate lacks an "epochmonth" month property (because months aren't all
+    the same length) so it needed a way to say "same day, next month".
+    Calling "next_month" w/o any argument moves the object to the same day
+    in the next month. If the day doesn't exist in the next month, such as
+    if you move from Jan 31 to Feb, then the date is moved back to the last
+    day of the next month.
+
+    The only argument, which defaults to 1, allows you to move backward or
+    forward any number of months. For example, the following command moves
+    the date forward two months:
+
+      $mydate->next_month(2);
+
+    This command moves the date backward three months:
+
+      $mydate->next_month(-3);
+
+    "next_month()" handles year boundaries without problem. Calling
+    "next_month()" for a date in December moves the date to January of the
+    next year.
+
+  after_create
+
+    "after_create" is intended for use when you are super-classing EzDate.
+    By default, "after_create" does nothing. See "Super-classing
+    Date::EzDate" below for more details.
+
+PROPERTIES
+    This section lists the properties of an EzDate object.
+
+    *Properties are case and space insensitive*. Properties can be in upper
+    or lower case, and you can put spaces anywhere to make them more
+    readable. For example, the following properties are all the same:
+
+            weekdaylong
+            WEEKDAYLONG
+            WeekDay Long
+            Wee Kdaylong  # makes no sense, but hey, it's your code
+
+  Basic properties
+
+    All of these properties are both readable and writable. Where there
+    might be some confusion about what happens if you assign to the property
+    more detail is given.
+
+    hour
+        Hour in 24 hour clock, 00 to 23. Two digits, with a leading zero
+        where necessary.
+
+    ampmhour
+        Hour in twelve hour clock, 0 to 12. Two digits, with a leading zero
+        where necessary.
+
+    ampm
+        *am* or *pm* as appropriate. Returns lowercase. If you set this
+        property the object will adjust to the same day and same hour but in
+        *am* or *pm* as you set.
+
+    ampmuc, ampmlc
+        ampmuc returns *AM* or *PM* uppercased. ampmlc returns *am* or *pm*
+        lowercased.
+
+    min, minute
+        Minute, 00 to 59. Two digits, with a leading zero where necessary.
+
+    sec, second
+        Second, 00 to 59. Two digits, with a leading zero where necessary.
+
+    weekdaynum
+        Number of the weekday. This number is zero-based, so Sunday is 0,
+        Monday is 1, etc. If you assign to this property the object will
+        reset the date to the assigned weekday of the same week. So, for
+        example, if the object represents Saturday Apr 14, 2001, and you
+        assign 1 (Monday) to *weekdaynum*:
+
+         $mydate->{'weekdaynum'} = 1;
+
+        Then the object will adjust to Monday Apr 9, 2001.
+
+    weekdayshort
+        First three letters of the weekday. *Sun*, *Mon*, *Tue*, etc. If you
+        assign to this property the object will adjust to that day in the
+        same week. When you assign to this property EzDate actually only
+        pays attention to the first three letters and ignores case, so
+        *SUNDAY* would a valid assignment.
+
+    weekdaylong
+        Full name of the weekday. If you assign to this property the object
+        will adjust to the day in the same week. When you assign to this
+        property EzDate actually only pays attention to the first three
+        letters and ignores case, so *SUN* would a valid assignment.
+
+    dayofmonth
+        The day of the month. If you assign to this property the object
+        adjusts to the day in the same month.
+
+    monthnum
+        Zero-based number of the month. January is 0, February is 1, etc. If
+        you assign to this property the object will adjust to the same
+        month-day in the assigned month. If the current day is greater than
+        allowed in the assigned month then the day will adjust to the
+        maximum day of the assigned month. So, for example, if the object is
+        set to 31 Dec 2001 and you assign the month to February (1):
+
+          $mydate->{'monthnum'} = 1;
+
+        Then *dayofmonth* will be set to 28.
+
+    monthnumbase1
+        1 based number of the month for those of us who are used to thinking
+        of January as 1, February as 2, etc. Can be assigned to.
+
+    monthshort
+        First three letters of the month. Can be assigned to. Case
+        insensitive in the assignment, so "JANUARY" would be a valid
+        assignment.
+
+    monthlong
+        Full name of the month. Can be assigned to. In the assignment,
+        EzDate only pays attention to the first three letters and ignores
+        case.
+
+    year
+        Year of the date the object represents.
+
+    yeartwodigits
+        The last two digits of the year. If you assign to this property,
+        EzDate assumes you mean to use the same first two digits. Therefore,
+        if the current date of the object is 1994 and you assign '12' then
+        the year will be 1912... quite possibly not what you intended.
+
+    dayofyear
+        Zero-based Number of days into the year of the date. "yearday" does
+        the same thing.
+
+    dayofyearbase1
+        One-based number of days into the year of the date. "yeardaybase1"
+        does the same thing.
+
+    full
+        A full string representation of the date, e.g. "04:48:01 pm, Tue Apr
+        10, 2001". You can assign just about any common date and/or time
+        format to this property.
+
+        *Please take the previous statement as a challenge.* I've
+        aggressively tried to find formats that EzDate can't understand.
+        When I've found one, I've modified the code to accomodate it. If you
+        have some reasonably unambiguous date format that EzDate is unable
+        to parse correctly, please send it to me. *-Miko*
+
+    dmy The day, month and year representation of the date, e.g.
+        "03JUN2004".
+
+    miltime
+        The time formatted as HHMM on a 24 hour clock. For example, 2:20 PM
+        is 1420.
+
+    clocktime
+        The time formatted as HH::MM AM/PM.
+
+    minofday
+        How many minutes since midnight. Useful for doing math with times in
+        a day.
+
+  Epoch properties
+
+    The following properties allow you to do date calculations at different
+    granularities. All of these properties are both readable and writable.
+
+    epochsecond
+        The basic Perl epoch integer.
+
+    epochhour
+        How many hours since the epoch.
+
+    epochminute
+        How many minutes since the epoch.
+
+    epochday
+        How many days since the epoch.
+
+  Read-only properties
+
+    The following properties are read-only and will crash if you try to
+    assign to them.
+
+    leapyear
+        True if the year is a leap year.
+
+    daysinmonth
+        How many days in the month.
+
+CUSTOM FORMATS
+    You'll probably often want to retrieve more than one piece of
+    information about a date/time at once. You could, of course, do this by
+    getting each property individually and concatenating them together. For
+    example, you might want to get the date in the format *Monday, June 10,
+    2002*. You could build that string like this:
+
+      $str = 
+        $date->{'weekdaylong'} . ', ' . 
+        $date->{'monthlong'} . ' ' . 
+        $date->{'dayofmonth'} . ', ' . 
+        $date->{'year'};
+
+    That's a lot of typing, however, and it's difficult to tell from the
+    code what the final string will look like. To make life EZ, EzDate
+    allows you embed several date properties in a single call. Just surround
+    each property with braces:
+
+      $str = $date->{'{weekday long}, {month long} {day of month}, {year}'};
+
+  Storing custom formats
+
+    EzDate allows you to set your own custom date formats. This will come in
+    handy for special date formats that are needed in several places
+    throughout a project. For example, suppose you want all your dates in
+    the format *Monday, June 10, 2002*. Of course, you could output them
+    using a format string like in the example above, but even that will get
+    tiring if you need to output the same format in several places. Much
+    easier would be to set the format once. To do so, just call the
+    "set_format" method with the name of the format and the format itself:
+
+      $date->set_format('myformat', '{weekdaylong}, {monthlong} {dayofmonth}, {year}');
+      print $date->{'myformat'}, "\n";
+
+  Un*x-style date formatting
+
+    To make the Unix types happy you format your dates using standard Un*x
+    date codes. The format string must contain at least one % or EzDate
+    won't know it's a format string. For example, you could output a date
+    like this:
+
+      print $mydate->{'%h %d, %Y %k:%M %p'}, "\n";
+
+    which would give you something like this:
+
+      Oct 31, 2001 02:43 pm
+
+    Following is a list of codes. "*" indicates that the code acts
+    differently than standard Unix codes. "x" indicates that the code does
+    not exists in standard Unix codes.
+
+      %a   weekday, short                               Mon
+      %A   weekday, long                                Monday
+      %b * hour, 12 hour format, no leading zero        2
+      %B * hour, 24 hour format, no leading zero        2
+      %c   full date                                    Mon Aug 10 14:40:38
+      %d   numeric day of the month                     10
+      %D   date as month/date/year                      08/10/98
+      %e x numeric month, 1 to 12, no leading zero      8
+      %f x numeric day of month, no leading zero        3
+      %h   short month                                  Aug
+      %H   hour 00 to 23                                14
+      %j   day of the year, 001 to 366                  222
+      %k   hour, 12 hour format                         14
+      %m   numeric month, 01 to 12                      08
+      %M   minutes                                      40
+      %n   newline
+      %P x AM/PM                                        PM
+      %p * am/pm                                        pm
+      %r   hour:minute:second AM/PM                     02:40:38 PM
+      %s   number of seconds since start of 1970        902774438
+      %S   seconds                                      38
+      %t   tab
+      %T   hour:minute:second (24 hour format)          14:40:38
+      %w   numeric day of the week, 0 to 6, Sun is 0    1
+      %y   last two digits of the year                  98
+      %Y   four digit year                              1998
+      %%   percent sign                                 %
+
+EXTENDING
+    If you plan on using the same custom formats in several different places
+    in your project, you might find it easier to super-class EzDate so that
+    your formats are loaded automatically whenever an object is created.
+
+    To super-class EzDate, it is actually necessary to super-class *two*
+    classes: Date::EzDate and Date::EzDate::Tie. For example, suppose you
+    want to create a class called MyDateClass. To do that, create a file
+    called MyDateClass.pm, store it in the root of one of the directories in
+    your @INC path. Then put both MyDateClass and MyDateClass::Tie packages
+    in that file. The following code can be used as a working template for
+    super-classing EzDate. Notice that we override the "after_create()"
+    method in order to add a custom format. "after_create()" is called by
+    the "new" method after the new object has been created but before it is
+    returned.
+
+      package MyDateClass;
+      use strict;
+      use Date::EzDate;
+      use vars qw(@ISA);
+      @ISA = ('Date::EzDate');
+  
+      # override after_create
+      sub after_create {
+        my ($self) = @_;
+        $self->set_format('myformat', '{weekdaylong}, {monthlong} {dayofmonth}, {year}');
+      }
+  
+      ##############################################################
+      package MyDateClass::Tie;
+      use strict;
+      use vars qw(@ISA);
+      @ISA = ('Date::EzDate::Tie');
+  
+      # return true
+      1;
+
+    You can then load your class with code like this:
+
+      use MyDateClass;
+      my ($date, $str);
+  
+      $date = MyDateClass->new();
+      print $date->{'myformat'}, "\n";
+
+    EzDate is really two packages in one: the public object, and the private
+    tied hash (which is where all the date info is stored). If you want to
+    add a public method, add it in the main class (e.g. MyDateClass, not
+    MyDateClass::Tie). Usually in those situations you'll need to use the
+    private tied hash object (i.e. the object used internally by the tying
+    mechanism). To get to that tied object, used the tied method, like this:
+
+      sub my_method {
+            my ($self) = @_;
+            my $ob = tied(%{$self});
+    
+        # do stuff with $self and $ob
+      }
+
+LIMITATIONS, KNOWN/SUSPECTED BUGS
+    The routine for setting the year has an off-by-one problem which is
+    kludgly fixed but which I haven't been able to properly solve.
+
+    EzDate is entirely based on the "localtime()" and "timelocal()"
+    functions, so it inherits their limitations. EzDate is probably not a
+    good choice for handling dates before 1970.
+
+TO DO
+    The following list itemizes features I'd like to add to EzDate.
+
+    Time zone properties
+        The current version does not address time zone issues. Frankly, I
+        haven't been able to figure out how best to deal with them. I'd like
+        a system where the object knows what time zone it's in and if it's
+        daylight savings time. Changing to another time zone changes the
+        other properties such that the object is in the same moment in time
+        in the new time zone and it was in the old time zone. For example,
+        if the object represents 5pm in the Eastern Time Zone (e.g. where
+        New York City is) and its time zone is changed to Pacific Time (e.g.
+        where Los Angeles is) then the object would have a time of 2pm.
+
+    Assignment based on format
+        Right now the formatted string feature is read-only. It might be
+        useful if the date could be assigned based on a format. So, for
+        example, you could set the date as Nov 1, 2001 like this:
+
+          $mydate->{'%h %d %Y'} = 'Nov 1 2001';
+
+        This would come in handy when dealing with weirdly formatted dates.
+        However, EzDate is already quite robust about handling weirdly
+        formatted dates, so this feature is not as pressingly needed as it
+        might seem.
+
+    Next weekday
+        I'd like a function for moving the date forward (or backward) to the
+        next (previous) day of a week.
+
+TERMS AND CONDITIONS
+    Copyright (c) 2001-2002 by Miko O'Sullivan. All rights reserved. This
+    program is free software; you can redistribute it and/or modify it under
+    the same terms as Perl itself. This software comes with NO WARRANTY of
+    any kind.
+
+AUTHOR
+    Miko O'Sullivan miko@idocs.com
+
+VERSION
+    Version 0.90 November 1, 2001
+        Initial release
+
+    Version 0.91 December 10, 2001
+        UI enhancements
+
+    Version 0.92 January 15, 2002
+        Fixed some bugs
+
+    Version 0.93 February 11, 2002
+        Fixed some more bugs
+
+    Version 1.00 July 5, 2002
+        Fixed a bug in next_month.
+
+        Added a lotta functionality:
+
+        - Space insensitive property names
+
+        - Custom formats using braced property names
+
+        - Stored custom formats
+
+        - More supportive of super-classing
+
+        - All that and yet actually decreased the volume of code
+
+        - Decided this sucker's ready for 1.00 release
+
+        Also made a few minor not-so-backward-compatible changes:
+
+        - Got rid of the "printabledate" and "printabletime" properties,
+        which were just relics from an early project that used EzDate.
+
+        - Changed "nextmonth" to "next_month" to stay compatible with other
+        methods that were added and will be added.
 
