@@ -1,7 +1,7 @@
 package Date::EzDate;
 use strict;
 use Carp;
-use Debug::ShowStuff ':all';
+# use Debug::ShowStuff ':all';
 use vars qw($VERSION @ltimefields $overload $default_warning);
 
 # documentation at end of file
@@ -16,7 +16,7 @@ use overload
 
 
 # version
-$VERSION = '1.09';
+$VERSION = '1.10';
 
 # constants and globals
 use constant WARN_NONE   => 0;
@@ -384,7 +384,7 @@ use strict;
 use Carp 'croak', 'carp';
 use Tie::Hash;
 use Time::Local;
-use Debug::ShowStuff ':all';
+# use Debug::ShowStuff ':all';
 use re 'taint';
 use POSIX;
 
@@ -2811,8 +2811,11 @@ Also made a few minor not-so-backward-compatible changes:
 
 - Clarified example of using $Date::EzDate::overload
 
+=item Version 1.10
+
+- Removed Debug::ShowStuff call from module.  That shouldn't have been in the distribution.
+
 =back
 
 
 =cut
-

@@ -1,4 +1,4 @@
-Date::EzDate version 1.09
+Date::EzDate version 1.10
 =========================
 
 NAME
@@ -1063,4 +1063,8 @@ VERSION
         resulting monthnum will still always be from 0..11.
 
         - Clarified example of using $Date::EzDate::overload
+
+    Version 1.10
+        - Removed Debug::ShowStuff call from module. That shouldn't have
+        been in the distribution.
 
