@@ -16,7 +16,7 @@ use overload
 
 
 # version
-$VERSION = '1.10';
+$VERSION = '1.11';
 
 # constants and globals
 use constant WARN_NONE   => 0;
@@ -1669,6 +1669,15 @@ Date::EzDate - Date and time manipulation made easy
 
 =head1 SYNOPSIS
 
+PLEASE NOTE: Date::EzDate is no longer under development or being
+supported.  The author of EzDate now himself uses the DateTime
+module (http://search.cpan.org/dist/DateTime/) by Dave Rolsky.
+DateTime addresses most of the issues that led to the original
+development of EzDate, and also provides many features EzDate
+doesn't (and was never intended to). If anybody would like to take
+over development of Date::EzDate the author would be happy to turn
+it over.  Just contact Miko O'Sullivan at miko@idocs.com.
+
 An EzDate object represents a single point in time and exposes all properties
 of that point. EzDate has many features, here are a few:
 
@@ -2817,5 +2826,11 @@ Also made a few minor not-so-backward-compatible changes:
 
 =back
 
+=item Version 1.11
+
+- Last version supported by Miko O'Sullivan.  No changes to code, just
+added the note about EzDate no longer being supported.
+
+=back
 
 =cut
