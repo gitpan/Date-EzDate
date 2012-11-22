@@ -1,5 +1,10 @@
-EzDate.pm
-Makefile.PL
 MANIFEST
+Changes
+LICENSE
+Makefile.PL
+Build.PL
+META.yml
 README
-test.pl
+lib/Date/EzDate.pm
+lib/Date/EzDate.pod
+t/regtest.t

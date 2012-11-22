@@ -16,7 +16,7 @@ use overload
 
 
 # version
-$VERSION = '1.11';
+$VERSION = '1.12';
 
 # constants and globals
 use constant WARN_NONE   => 0;
@@ -605,7 +605,7 @@ sub format_split {
 
 #------------------------------------------------------------------------------
 # warn
-# 
+#
 sub warn {
 	my $self = shift;
 	my $level = defined($self->{'warnings'}) ? $self->{'warnings'} : $Date::EzDate::default_warning;
@@ -619,14 +619,14 @@ sub warn {
 	
 	croak @_;
 }
-# 
+#
 # warn
 #------------------------------------------------------------------------------
 
 
 #------------------------------------------------------------------------------
 # normalize_key
-# 
+#
 sub normalize_key {
 	$_[0] =~ s|\s||gs;
 	$_[0] =~ tr/A-Z/a-z/ unless $_[0] =~ m|^\%\w$|;
@@ -643,7 +643,7 @@ sub normalize_key {
 	
 	$_[0] =~ s|number|num|sg;
 }
-# 
+#
 # normalize_key
 #------------------------------------------------------------------------------
 
@@ -1453,16 +1453,23 @@ sub timefromfull {
 	# 01-14-2001
 	sub getdate {
 		my ($val, $day, $month, $year) = @_;
-
+		
+		# Tue Jun 12 13:03:28 2012
+		if ($val =~ s/^([a-z]+) (\d+) (\S+) (\d+)$/$3/) {
+			$year  = $4;
+			$month = $MonthNums{$1};
+			$day   = $2;
+		}
+		
 		# 14 Jan 2001
 		# 14 JAN 01
 		# 14JAN2001   # will be normalized to have spaces
-		if ($val =~ s/^(\d+) ([a-z]+) (\d+)//) {
+		elsif ($val =~ s/^(\d+) ([a-z]+) (\d+)//) {
 			$day = $1;
 			$month = $MonthNums{$2};
 			$year = $3;
 		}
-	
+		
 		# Jan 14, 2001
 		# Jan 14, 01
 		elsif ($val =~ s/^([a-z]+) (\d+) (\d+)//) {
@@ -1612,8 +1619,8 @@ sub maxday {
 
 
 #------------------------------------------------------------------------------
-# zeropad
-# 
+# zeropad_open, zeropad_2
+#
 sub zeropad_open {
 	my ($rv, $length) = @_;
 	$length ||= 2;
@@ -1624,8 +1631,8 @@ sub zeropad_open {
 sub zeropad_2 {
 	return sprintf "%02d", $_[0];
 }
-# 
-# zeropad
+#
+# zeropad_open, zeropad_2
 #------------------------------------------------------------------------------
 
 
@@ -1666,17 +1673,7 @@ __END__
 
 Date::EzDate - Date and time manipulation made easy
 
-
 =head1 SYNOPSIS
-
-PLEASE NOTE: Date::EzDate is no longer under development or being
-supported.  The author of EzDate now himself uses the DateTime
-module (http://search.cpan.org/dist/DateTime/) by Dave Rolsky.
-DateTime addresses most of the issues that led to the original
-development of EzDate, and also provides many features EzDate
-doesn't (and was never intended to). If anybody would like to take
-over development of Date::EzDate the author would be happy to turn
-it over.  Just contact Miko O'Sullivan at miko@idocs.com.
 
 An EzDate object represents a single point in time and exposes all properties
 of that point. EzDate has many features, here are a few:
@@ -1943,14 +1940,14 @@ You can also create a custom format by simply assigning the format to its name.
 If EzDate sees a C<{> in the value being assigned, it knows that you are
 assigning a format, not a date. The set_format line above could be written
 like this:
-  
-  $date->{'myformat'} = '{weekday long}, {month long} {day of month}, {year}';
+
+ $date->{'myformat'} = '{weekday long}, {month long} {day of month}, {year}';
 
 Note that it's not necessary to store a custom format if you're only going
 to use it once.  If you wanted the format above, but just once, you could
 output it like this:
 
-  print $date->{'{weekday long}, {month long} {day of month}, {year}'};
+ print $date->{'{weekday long}, {month long} {day of month}, {year}'};
 
 To delete a custom format, C<$mydate->del_format($name)>. To get the format
 string itself, use C<$mydate->get_format($name)>.  
@@ -2469,7 +2466,7 @@ about a date/time at once.  You could, of course, do this by getting each
 property individually and concatenating them together.  For example, you might
 want to get the date in the format I<Monday, June 10, 2002>.  You could build
 that string like this:
-    
+
   $str = 
     $date->{'weekday long'} . ', ' . 
     $date->{'month long'} . ' ' . 
@@ -2824,13 +2821,19 @@ Also made a few minor not-so-backward-compatible changes:
 
 - Removed Debug::ShowStuff call from module.  That shouldn't have been in the distribution.
 
-=back
-
 =item Version 1.11
 
-- Last version supported by Miko O'Sullivan.  No changes to code, just
-added the note about EzDate no longer being supported.
+This version had been considered the final release of Date::EzDate.  However, as of
+verson 1.12 it is active again.
+
+=item Version 1.12 June 12, 2012
+
+In version 1.11 I had stated that Date::EzDate would no longer be developed further
+or supported.  Basically, I changed my mind and am now developing it again.
+
+- Added date format "Tue Jun 12 13:03:28 2012".
 
 =back
+
 
 =cut
