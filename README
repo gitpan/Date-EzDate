@@ -5,13 +5,15 @@ NAME
 SYNOPSIS
 
     An EzDate object represents a single point in time and exposes all
-    properties of that point. EzDate has many features, here are a few:
+    properties of that point. It also makes it easy to change those
+    properties to produce a different point in time. EzDate has many
+    features, here are a few:
 
      use Date::EzDate;
      my $mydate = Date::EzDate->new();
     
      # output some date information
-     print $mydate, "\n";  # e.g. output:  Wed Apr 11, 2001 09:06:26 
+     print $mydate, "\n";  # e.g. output:  Wed Apr 11, 2001 09:06:26
     
      # go to next day
      $mydate->{'epochday'}++;
@@ -23,15 +25,15 @@ SYNOPSIS
      # output some other date and time information
      # e.g. output:  Thursday April 12, 2001 09:06 am
      print
-            $mydate->{'weekday long'},        ' ',
-            $mydate->{'month long'},          ' ',
-            $mydate->{'day of month'},        ', ',
-            $mydate->{'year'},                ' ',
-            $mydate->{'ampm hour no zero'},   ':',
-            $mydate->{'min'},                 ' ',
-            $mydate->{'am pm'},               "\n";
+       $mydate->{'weekday long'},        ' ',
+       $mydate->{'month long'},          ' ',
+       $mydate->{'day of month'},        ', ',
+       $mydate->{'year'},                ' ',
+       $mydate->{'ampm hour no zero'},   ':',
+       $mydate->{'min'},                 ' ',
+       $mydate->{'am pm'},               "\n";
     
-     # go to Monday of same week, but be lazy and don't spell out 
+     # go to Monday of same week, but be lazy and don't spell out
      # the whole day or case it correctly
      $mydate->{'weekday long'} = 'MON';
     
@@ -40,16 +42,16 @@ SYNOPSIS
      # go to previous year
      $mydate->{'year'}--;
     
-     print $mydate, "\n";  # e.g. output:  Sun Apr 09, 2000 09:06:26 
+     print $mydate, "\n";  # e.g. output:  Sun Apr 09, 2000 09:06:26
 
 INSTALLATION
 
     Date::EzDate can be installed with the usual routine:
 
-            perl Makefile.PL
-            make
-            make test
-            make install
+     perl Makefile.PL
+     make
+     make test
+     make install
 
     You can also just copy EzDate.pm into the Date/ directory of one of
     your library trees.
@@ -94,7 +96,7 @@ DESCRIPTION
       hour:min:sec) of the object does not change.
 
        $mydate->{'epochday'}++;
-       
+      
        # outputs:  11:11:40 Thu Apr 12, 2001
        print $mydate->{'full'}, "\n";
 
@@ -110,7 +112,7 @@ YESTERDAY and TOMORROW
     example, the following code creates an EzDate object with tomorrow's
     date:
 
-      $date = Date::EzDate->new('tomorrow');
+     $date = Date::EzDate->new('tomorrow');
 
 STRINGIFICATION
 
@@ -118,15 +120,15 @@ STRINGIFICATION
     example, the following code outputs a string like Tue Sep 3, 2002
     14:01:02:
 
-            $date = Date::EzDate->new();
-            print $date, "\n";
+     $date = Date::EzDate->new();
+     print $date, "\n";
 
     The object stringifies to its default format, so if you want to change
     how it stringifies simply change the default format. For example, the
     following code outputs a string like September 3, 2002:
 
-            $date->{'default'} = '{month long} {day of month no zero} {year}';
-            print $date, "\n";
+     $date->{'default'} = '{month long} {day of month no zero} {year}';
+     print $date, "\n";
 
 COMPARISON
 
@@ -142,21 +144,21 @@ COMPARISON
     EzDate objects, then determines if the first object is less than the
     second:
 
-            $mybday = Date::EzDate->new();
-            $yourbday = Date::EzDate->new('tomorrow');
+     $mybday = Date::EzDate->new();
+     $yourbday = Date::EzDate->new('tomorrow');
     
-            if ($mybday < $yourbday) {
-                    ....
-            }
+     if ($mybday < $yourbday) {
+       ....
+     }
 
     Only one of the two items being compared needs be an EzDate object. The
     other can be a string representation of a date. For example, the
     following code correctly determines if the given EzDate object is
     before June 25, 2003:
 
-            if ($date < 'June 25, 2003') {
-                    ...
-            }
+     if ($date < 'June 25, 2003') {
+        ...
+     }
 
     By default, the comparison is done on the epochday property, so two
     EzDate objects that have the same date but different times will be
@@ -166,19 +168,19 @@ COMPARISON
     to epoch hour, meaning that two date/times are considered the same only
     if they are identical down to the hour:
 
-      my ($start, $finish);
-      $start = Date::EzDate->new('Oct 18, 2006 4pm');
-      $finish = Date::EzDate->new('Oct 18, 2006 6pm');
-      
-      # outputs false, because both epochdays are the same
-      print 'finish is greater than start: ', $finish > $start, "\n";
-      
-      # change $Date::EzDate::overload to epochhour
-      $Date::EzDate::overload = 'epochhour';
-      
-      # output true, because Oct 18, 2006 6pm is 
-      # greater than Oct 18, 2006 4pm
-      print 'finish is greater than start: ', $finish > $start, "\n";
+     my ($start, $finish);
+     $start = Date::EzDate->new('Oct 18, 2006 4pm');
+     $finish = Date::EzDate->new('Oct 18, 2006 6pm');
+    
+     # outputs false, because both epochdays are the same
+     print 'finish is greater than start: ', $finish > $start, "\n";
+    
+     # change $Date::EzDate::overload to epochhour
+     $Date::EzDate::overload = 'epochhour';
+    
+     # output true, because Oct 18, 2006 6pm is
+     # greater than Oct 18, 2006 4pm
+     print 'finish is greater than start: ', $finish > $start, "\n";
 
     PLEASE NOTE: $Date::EzDate::overload used to be named
     $Date::EzDate::compare. I made a non-backwards compatible change to
@@ -192,12 +194,12 @@ COMPARISON
     example, you can simple determine if two dates are on the same day of
     week by using their day of week properties:
 
-            $date = Date::EzDate->new('January 3, 2001');
-            $otherdate = Date::EzDate->new('January 10, 2001');
-            
-            if ($date->{'day of week'} eq $otherdate->{'day of week'}) {
-                    ...
-            }
+     $date = Date::EzDate->new('January 3, 2001');
+     $otherdate = Date::EzDate->new('January 10, 2001');
+    
+     if ($date->{'day of week'} eq $otherdate->{'day of week'}) {
+        ...
+     }
 
 OVERLOADED ADDITION AND SUBTRACTION
 
@@ -207,23 +209,23 @@ OVERLOADED ADDITION AND SUBTRACTION
     the object, simply increment it with ++ like a number. For example, the
     following code moves the day from Jan 31, 2003 to Feb 1, 2003:
 
-      my $date = Date::EzDate->new('Jan 31, 2003');
-      print $date, "\n";  # outputs Fri Jan 31, 2003 16:05:27
-      $date++;
-      print $date;      # outputs Sat Feb 1, 2003 16:05:27
+     my $date = Date::EzDate->new('Jan 31, 2003');
+     print $date, "\n";  # outputs Fri Jan 31, 2003 16:05:27
+     $date++;
+     print $date;      # outputs Sat Feb 1, 2003 16:05:27
 
     You can also move by more than one day with + or +=. These two commands
     do the same thing:
 
-      $date = $date + 3;
-      $date += 3;    
+     $date = $date + 3;
+     $date += 3;
 
     Subtraction works the same way. All of these commands move the object
     one day backwards:
 
-      $date = $date - 1;
-      $date -= 1;
-      $date--;
+     $date = $date - 1;
+     $date -= 1;
+     $date--;
 
 METHODS
 
@@ -239,22 +241,22 @@ METHODS
 
      # current date and time
      my $date = Date::EzDate->new();
-     
+    
      # a specific date and time
      my $date = Date::EzDate->new('Jan 31, 2001');
-     
+    
      # a date in DDMMMYYYY format
      my $date = Date::EzDate->new('14JAN2003');
-     
+    
      # a little forgiveness is built in (notice oddly place comma)
      my $date = Date::EzDate->new('14 January, 2003');
-     
-     # epoch second (23:27:39, Tue Apr 10, 2001 if you're curious) 
+    
+     # epoch second (23:27:39, Tue Apr 10, 2001 if you're curious)
      my $date = Date::EzDate->new(986959659);
-     
+    
      # yesterday
      my $date = Date::EzDate->new('yesterday');
-     
+    
      # tomorrow
      my $date = Date::EzDate->new('tomorrow');
 
@@ -264,8 +266,8 @@ METHODS
     example, suppose you want a format of the form Monday, June 10, 2002.
     You can specify that format using set_format like this:
 
-      $date->set_format('myformat', '{weekday long}, {month long} {day of month}, {year}');
-      print $date->{'myformat'}, "\n";
+     $date->set_format('myformat', '{weekday long}, {month long} {day of month}, {year}');
+     print $date->{'myformat'}, "\n";
 
     You can also create a custom format by simply assigning the format to
     its name. If EzDate sees a { in the value being assigned, it knows that
@@ -308,19 +310,19 @@ METHODS
     method. The first and only argument indicates how to handle errors.
     There are three possible values:
 
-            0       Do not handle error in any way
-            1       Output error to STDERR (default)
-            2       Output to STDERR and exit program
+     0      Do not handle error in any way
+     1      Output error to STDERR (default)
+     2      Output to STDERR and exit program
 
     So, for example, the following code sets the warnings to level 2:
 
-      $date->set_warnings(2);
+     $date->set_warnings(2);
 
     You can set the global default warning level by setting
     $Date::EzDate::default_warning. For example, the following code sets
     the global default level to 2:
 
-      $Date::EzDate::default_warning = 2;
+     $Date::EzDate::default_warning = 2;
 
  $mydate->next_month([integer])
 
@@ -335,11 +337,11 @@ METHODS
     forward any number of months. For example, the following command moves
     the date forward two months:
 
-      $mydate->next_month(2);
+     $mydate->next_month(2);
 
     This command moves the date backward three months:
 
-      $mydate->next_month(-3);
+     $mydate->next_month(-3);
 
     next_month() handles year boundaries without problem. Calling
     next_month() for a date in December moves the date to January of the
@@ -355,17 +357,17 @@ METHODS
     the minute and second to 0. So, the following string sets the object to
     exactly 4:00:00 pm:
 
-      $date = Date::EzDate->new('4 pm');
+     $date = Date::EzDate->new('4 pm');
 
     If you would prefer the old behavior where the time would be set to
     whatever the current minute and second are, then call zero_hour_ampm
     with an argument of zero:
 
-      $date->zero_hour_ampm(0);
+     $date->zero_hour_ampm(0);
 
     You can also pass zero_hour_ampm as an initial argument for new:
 
-      $date = Date::EzDate->new('January 31, 2002 1 am', zero_hour_ampm=>0);
+     $date = Date::EzDate->new('January 31, 2002 1 am', zero_hour_ampm=>0);
 
  after_create
 
@@ -381,23 +383,23 @@ METHODS
     repeated if they are the same in both days. The single argument to
     date_range_string is another EzDate object.
 
-            # same month and year
-            # outputs Mar 5-7, 2004
-            $start = Date::EzDate->new('Mar 5, 2004');
-            $end = Date::EzDate->new('Mar 7, 2004');
-            print $start->date_range_string($end);
-            
-            # same year, different months
-            # outputs Feb 20-Mar 3, 2004
-            $start = Date::EzDate->new('feb 20, 2004');
-            $end = Date::EzDate->new('mar 3, 2004');
-            print $start->date_range_string($end);
-            
-            # different years
-            # outputs Dec 23, 2004-Jan 3, 2005
-            $start = Date::EzDate->new('Dec 23, 2004');
-            $end = Date::EzDate->new('Jan 3, 2005');
-            print $start->date_range_string($end);
+     # same month and year
+     # outputs Mar 5-7, 2004
+     $start = Date::EzDate->new('Mar 5, 2004');
+     $end = Date::EzDate->new('Mar 7, 2004');
+     print $start->date_range_string($end);
+    
+     # same year, different months
+     # outputs Feb 20-Mar 3, 2004
+     $start = Date::EzDate->new('feb 20, 2004');
+     $end = Date::EzDate->new('mar 3, 2004');
+     print $start->date_range_string($end);
+    
+     # different years
+     # outputs Dec 23, 2004-Jan 3, 2005
+     $start = Date::EzDate->new('Dec 23, 2004');
+     $end = Date::EzDate->new('Jan 3, 2005');
+     print $start->date_range_string($end);
 
     It does not matter if the EzDate object is earlier or later than the
     second date. The function will always return them with the earlier date
@@ -406,42 +408,42 @@ METHODS
     You can pass either an EzDate object or a string. So, for example, the
     following blocks of code output the same thing:
 
-            # outputs Mar 5-7, 2004
-            $start = Date::EzDate->new('Mar 5, 2004');
-            $end = Date::EzDate->new('Mar 7, 2004');
-            print $start->date_range_string($end);
+     # outputs Mar 5-7, 2004
+     $start = Date::EzDate->new('Mar 5, 2004');
+     $end = Date::EzDate->new('Mar 7, 2004');
+     print $start->date_range_string($end);
     
-            # outputs Mar 5-7, 2004
-            $start = Date::EzDate->new('Mar 5, 2004');
-            print $start->date_range_string('Mar 7, 2004');
+     # outputs Mar 5-7, 2004
+     $start = Date::EzDate->new('Mar 5, 2004');
+     print $start->date_range_string('Mar 7, 2004');
 
     If both dates are the same day, then just that date will be returned:
 
-            # same day
-            # outputs Dec 23, 2004
-            $start = Date::EzDate->new('Dec 23, 2004');
-            print $start->date_range_string('Dec 23, 2004');
+     # same day
+     # outputs Dec 23, 2004
+     $start = Date::EzDate->new('Dec 23, 2004');
+     print $start->date_range_string('Dec 23, 2004');
 
     date_range_string can also be called a static method, i.e., without
     ever explicitly defining an EzDate object:
 
-            # outputs Mar 5-7, 2004
-            print Date::EzDate::date_range_string('Mar 5, 2004', 'Mar 7, 2004');
+     # outputs Mar 5-7, 2004
+     print Date::EzDate::date_range_string('Mar 5, 2004', 'Mar 7, 2004');
 
     If you load EzDate using the ':all' param, the function call is even
     simpler:
 
-            # note use of ':all'
-            use Date::EzDate ':all';
+     # note use of ':all'
+     use Date::EzDate ':all';
     
-            # outputs Mar 5-7, 2004
-            print date_range_string('Mar 5, 2004', 'Mar 7, 2004');
+     # outputs Mar 5-7, 2004
+     print date_range_string('Mar 5, 2004', 'Mar 7, 2004');
 
     Array references in the argument list are expanded. So, for example,
     the following two lines of code produce the same thing:
 
-            print date_range_string('May 3, 2005', 'May 5, 2005');
-            print date_range_string( ['May 3, 2005', 'May 5, 2005'] );
+     print date_range_string('May 3, 2005', 'May 5, 2005');
+     print date_range_string( ['May 3, 2005', 'May 5, 2005'] );
 
     This behavior was added to accomodate the output from day_lumps. See
     the documentation of day_lumps for a practical example of this feature.
@@ -452,92 +454,91 @@ METHODS
     minutes. For example, the following code outputs the range from 10:00
     am to 2:00 pm:
 
-            # outputs 10:00am-2:00pm
-            $start = Date::EzDate->new('10:00am');
-            $end = Date::EzDate->new('2:00pm');
-            print $start->time_range_string($end);
+     # outputs 10:00am-2:00pm
+     $start = Date::EzDate->new('10:00am');
+     $end = Date::EzDate->new('2:00pm');
+     print $start->time_range_string($end);
 
     time_range_string always tries to return the string as concisely as
     possible, so if the two times have the same am/pm designation then
     am/pm is only output once:
 
-            # outputs 10:00-11:00am
-            $start = Date::EzDate->new('10:00am');
-            $end = Date::EzDate->new('11:00am');
-            print $start->time_range_string($end);
+     # outputs 10:00-11:00am
+     $start = Date::EzDate->new('10:00am');
+     $end = Date::EzDate->new('11:00am');
+     print $start->time_range_string($end);
 
     time_range_string can also be called as a static method, i.e. without
     actually creating any EzDate objects:
 
-            # outputs 8:00-9:00pm
-            print Date::EzDate::time_range_string('8pm', '9pm');
+     # outputs 8:00-9:00pm
+     print Date::EzDate::time_range_string('8pm', '9pm');
 
     If you load EzDate using the ':all' param, the function call is even
     simpler:
 
-            # note use of ':all'
-            use Date::EzDate ':all';
+     # note use of ':all'
+     use Date::EzDate ':all';
     
-            # outputs 8:00-9:00pm
-            print time_range_string('8pm', '9pm');
+     # outputs 8:00-9:00pm
+     print time_range_string('8pm', '9pm');
 
     The earlier time is always output first. If you only pass times, not
     dates, then EzDate assumes that both times are on the same day and
     outputs the earlier time first:
 
-            # outputs 8:00-9:00pm
-            print time_range_string('8pm', '9pm');
+     # outputs 8:00-9:00pm
+     print time_range_string('8pm', '9pm');
 
     If the time range crosses over midnight, you should explicitly indicate
     both dates:
 
-            # output jan 21, 2005 8pm
-            print time_range_string('jan 21, 2005 9pm', 'jan 22, 2005 5am');
+     # output jan 21, 2005 8pm
+     print time_range_string('jan 21, 2005 9pm', 'jan 22, 2005 5am');
 
  day_lumps(@dates)
 
     day_lumps groups an array of dates into "lumps" of contiguous dates.
     For example, consider the following dates:
 
-            Jan 3, 2005
-            Jan 4, 2005
-            Jan 5, 2005
-            Jan 6, 2005
-            Jan 10, 2005
-            Jan 15, 2005
-            Jan 16, 2005
-            Jan 17, 2005
+     Jan 3, 2005
+     Jan 4, 2005
+     Jan 5, 2005
+     Jan 6, 2005
+     Jan 10, 2005
+     Jan 15, 2005
+     Jan 16, 2005
+     Jan 17, 2005
 
     That list of dates could be more concisely expressed like this:
 
-            Jan 3-6, 2005
-            Jan 10, 2005
-            Jan 15-17, 2005
+     Jan 3-6, 2005
+     Jan 10, 2005
+     Jan 15-17, 2005
 
     day_lumps produces an array of day spans, each span containing the
     start and end date of a single "lump". Here's the code to produce the
     output from the example above:
 
-            # note use of ':all'
-            use Date::EzDate ':all';
-            
-            my (@dates, @lumps);
+    # note use of ':all' use Date::EzDate ':all';
+
+     my (@dates, @lumps);
     
-            @dates = (
-                    'Jan 3, 2005',
-                    'Jan 4, 2005',
-                    'Jan 5, 2005',
-                    'Jan 6, 2005',
-                    'Jan 10, 2005',
-                    'Jan 15, 2005',
-                    'Jan 16, 2005',
-                    'Jan 17, 2005',
-            );
+     @dates = (
+       'Jan 3, 2005',
+       'Jan 4, 2005',
+       'Jan 5, 2005',
+       'Jan 6, 2005',
+       'Jan 10, 2005',
+       'Jan 15, 2005',
+       'Jan 16, 2005',
+       'Jan 17, 2005',
+     );
     
-            @lumps = day_lumps(@dates);
+     @lumps = day_lumps(@dates);
     
-            foreach my $lump (@lumps)
-                    { print date_range_string($lump), "\n" }
+     foreach my $lump (@lumps)
+        { print date_range_string($lump), "\n" }
 
 PROPERTIES
 
@@ -547,22 +548,22 @@ PROPERTIES
     or lower case, and you can put spaces anywhere to make them more
     readable. For example, the following properties are all the same:
 
-            weekdaylong
-            WEEKDAYLONG
-            WeekDay Long
-            Wee Kdaylong  # ugly but works
+     weekdaylong
+     WEEKDAYLONG
+     WeekDay Long
+     Wee Kdaylong  # ugly but works
 
     Also, certain words can always be abbreviated.
 
-            minute  ==  min
-            second  ==  sec
-            number  ==  num
-            ordinal ==  num
+     minute  ==  min
+     second  ==  sec
+     number  ==  num
+     ordinal ==  num
 
     So, for example, the following two properties are the same:
 
-            $mydate->{'minute of day'};
-            $mydate->{'min of day'};
+     $mydate->{'minute of day'};
+     $mydate->{'min of day'};
 
  Basic properties
 
@@ -645,7 +646,7 @@ PROPERTIES
       day of the assigned month. So, for example, if the object is set to
       31 Dec 2001 and you assign the month to February (1):
 
-        $mydate->{'month number'} = 1;
+       $mydate->{'month number'} = 1;
 
       Then day of month will be set to 28.
 
@@ -703,15 +704,15 @@ PROPERTIES
       'midnight' to indicate specific times. So, for example, this string
       indicates July 25, 2003 and noon:
 
-              $mydate = Date::EzDate->new('July 23 2003 noon');
-              print $mydate->{'full'}; # outputs Wed Jul 23, 2003 12:00:00
+       $mydate = Date::EzDate->new('July 23 2003 noon');
+       print $mydate->{'full'}; # outputs Wed Jul 23, 2003 12:00:00
 
     dayandtime
 
       Outputs the date and the time (to minute granularity).
 
-              $mydate = Date::EzDate->new('December 23 2003 17:45');
-              print $mydate->{'dayandtime'}; # outputs Dec 23 2003, 5:45pm
+       $mydate = Date::EzDate->new('December 23 2003 17:45');
+       print $mydate->{'dayandtime'}; # outputs Dec 23 2003, 5:45pm
 
       dayandtime is the default output format.
 
@@ -729,8 +730,8 @@ PROPERTIES
 
       Actually, dayparam looks about the same as dmy, but it lowercased.
 
-              $date = Date::EzDate->new('Dec 1, 2004 12:54:15');
-              print $date->{'dayparam'}; # outputs 01dec2004
+       $date = Date::EzDate->new('Dec 1, 2004 12:54:15');
+       print $date->{'dayparam'}; # outputs 01dec2004
 
     military time, miltime
 
@@ -792,18 +793,18 @@ CUSTOM FORMATS
     example, you might want to get the date in the format Monday, June 10,
     2002. You could build that string like this:
 
-      $str = 
-        $date->{'weekday long'} . ', ' . 
-        $date->{'month long'} . ' ' . 
-        $date->{'day of month'} . ', ' . 
-        $date->{'year'};
+     $str =
+       $date->{'weekday long'} . ', ' .
+       $date->{'month long'} . ' ' .
+       $date->{'day of month'} . ', ' .
+       $date->{'year'};
 
     That's a lot of typing, however, and it's difficult to tell from the
     code what the final string will look like. To make life EZ, EzDate
     allows you embed several date properties in a single call. Just
     surround each property with braces:
 
-      $str = $date->{'{weekday long}, {month long} {day of month}, {year}'};
+     $str = $date->{'{weekday long}, {month long} {day of month}, {year}'};
 
  Storing custom formats
 
@@ -816,15 +817,15 @@ CUSTOM FORMATS
     easier would be to set the format once. To do so, just call the
     set_format method with the name of the format and the format itself:
 
-      $date->set_format('myformat', '{weekday long}, {month long} {day of month}, {year}');
-      print $date->{'myformat'}, "\n";
+     $date->set_format('myformat', '{weekday long}, {month long} {day of month}, {year}');
+     print $date->{'myformat'}, "\n";
 
     You can also create a custom format by simply assigning the format to
     its name. If EzDate sees a { in the value being assigned, it knows that
     you are assigning a format, not a date. The set_format line above could
     be written like this:
 
-      $date->{'myformat'} = '{weekday long}, {month long} {day of month}, {year}';
+     $date->{'myformat'} = '{weekday long}, {month long} {day of month}, {year}';
 
  Un*x-style date formatting
 
@@ -833,43 +834,43 @@ CUSTOM FORMATS
     EzDate won't know it's a format string. For example, you could output a
     date like this:
 
-      print $mydate->{'%h %d, %Y %k:%M %p'}, "\n";
+     print $mydate->{'%h %d, %Y %k:%M %p'}, "\n";
 
     which would give you something like this:
 
-      Oct 31, 2001 02:43 pm
+     Oct 31, 2001 02:43 pm
 
     Following is a list of codes. * indicates that the code acts
     differently than standard Unix codes. x indicates that the code does
     not exists in standard Unix codes.
 
-      %a   weekday, short                               Mon
-      %A   weekday, long                                Monday
-      %b * hour, 12 hour format, no leading zero        2
-      %B * hour, 24 hour format, no leading zero        2
-      %c   full date                                    Mon Aug 10 14:40:38
-      %d   numeric day of the month                     10
-      %D   date as month/date/year                      08/10/98
-      %e x numeric month, 1 to 12, no leading zero      8
-      %f x numeric day of month, no leading zero        3
-      %h   short month                                  Aug
-      %H   hour 00 to 23                                14
-      %j   day of the year, 001 to 366                  222
-      %k   hour, 12 hour format                         14
-      %m   numeric month, 01 to 12                      08
-      %M   minutes                                      40
-      %n   newline
-      %P x AM/PM                                        PM
-      %p * am/pm                                        pm
-      %r   hour:minute:second AM/PM                     02:40:38 PM
-      %s   number of seconds since start of 1970        902774438
-      %S   seconds                                      38
-      %t   tab
-      %T   hour:minute:second (24 hour format)          14:40:38
-      %w   numeric day of the week, 0 to 6, Sun is 0    1
-      %y   last two digits of the year                  98
-      %Y   four digit year                              1998
-      %%   percent sign                                 %
+     %a   weekday, short                               Mon
+     %A   weekday, long                                Monday
+     %b * hour, 12 hour format, no leading zero        2
+     %B * hour, 24 hour format, no leading zero        2
+     %c   full date                                    Mon Aug 10 14:40:38
+     %d   numeric day of the month                     10
+     %D   date as month/date/year                      08/10/98
+     %e x numeric month, 1 to 12, no leading zero      8
+     %f x numeric day of month, no leading zero        3
+     %h   short month                                  Aug
+     %H   hour 00 to 23                                14
+     %j   day of the year, 001 to 366                  222
+     %k   hour, 12 hour format                         14
+     %m   numeric month, 01 to 12                      08
+     %M   minutes                                      40
+     %n   newline
+     %P x AM/PM                                        PM
+     %p * am/pm                                        pm
+     %r   hour:minute:second AM/PM                     02:40:38 PM
+     %s   number of seconds since start of 1970        902774438
+     %S   seconds                                      38
+     %t   tab
+     %T   hour:minute:second (24 hour format)          14:40:38
+     %w   numeric day of the week, 0 to 6, Sun is 0    1
+     %y   last two digits of the year                  98
+     %Y   four digit year                              1998
+     %%   percent sign                                 %
 
 EXTENDING
 
@@ -889,34 +890,34 @@ EXTENDING
     is called by the new method after the new object has been created but
     before it is returned.
 
-      package MyDateClass;
-      use strict;
-      use Date::EzDate;
-      use vars qw(@ISA);
-      @ISA = ('Date::EzDate');
-      
-      # override after_create
-      sub after_create {
-        my ($self) = @_;
-        $self->set_format('myformat', '{weekdaylong}, {monthlong} {dayofmonth}, {year}');
-      }
-      
-      ##############################################################
-      package MyDateClass::Tie;
-      use strict;
-      use vars qw(@ISA);
-      @ISA = ('Date::EzDate::Tie');
-      
-      # return true
-      1;
+     package MyDateClass;
+     use strict;
+     use Date::EzDate;
+     use vars qw(@ISA);
+     @ISA = ('Date::EzDate');
+    
+     # override after_create
+     sub after_create {
+       my ($self) = @_;
+       $self->set_format('myformat', '{weekdaylong}, {monthlong} {dayofmonth}, {year}');
+     }
+    
+     ##############################################################
+     package MyDateClass::Tie;
+     use strict;
+     use vars qw(@ISA);
+     @ISA = ('Date::EzDate::Tie');
+    
+     # return true
+     1;
 
     You can then load your class with code like this:
 
-      use MyDateClass;
-      my ($date, $str);
-      
-      $date = MyDateClass->new();
-      print $date->{'myformat'}, "\n";
+     use MyDateClass;
+     my ($date, $str);
+    
+     $date = MyDateClass->new();
+     print $date->{'myformat'}, "\n";
 
     EzDate is really two packages in one: the public object, and the
     private tied hash (which is where all the date info is stored). If you
@@ -926,12 +927,12 @@ EXTENDING
     internally by the tying mechanism). To get to that tied object, used
     the tied method, like this:
 
-      sub my_method {
-            my ($self) = @_;
-            my $ob = tied(%{$self});
-        
+     sub my_method {
+        my ($self) = @_;
+        my $ob = tied(%{$self});
+    
         # do stuff with $self and $ob
-      }
+     }
 
 LIMITATIONS, KNOWN/SUSPECTED BUGS
 
@@ -965,7 +966,7 @@ TO DO
       useful if the date could be assigned based on a format. So, for
       example, you could set the date as Nov 1, 2001 like this:
 
-        $mydate->{'%h %d %Y'} = 'Nov 1 2001';
+       $mydate->{'%h %d %Y'} = 'Nov 1 2001';
 
       This would come in handy when dealing with weirdly formatted dates.
       However, EzDate is already quite robust about handling weirdly
@@ -1166,4 +1167,14 @@ VERSION
       now developing it again.
 
       - Added date format "Tue Jun 12 13:03:28 2012".
+
+    Version 1.13
+
+      - Minor tidying up of documentation.
+
+    Version 1.14
+
+      - Minor tidying up of documentation.
+
+      - Fixing some prerequisite issues.
 

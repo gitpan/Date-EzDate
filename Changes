@@ -1,6 +1,5 @@
-Revision history for Perl extension Date::EzDate
-
-Version 0.90 November 1, 2001
+Date::EzDate
+    Version 0.90 November 1, 2001
 
       Initial release
 
@@ -156,3 +155,13 @@ Version 0.90 November 1, 2001
       now developing it again.
 
       - Added date format "Tue Jun 12 13:03:28 2012".
+
+    Version 1.13
+
+      - Minor tidying up of documentation.
+
+    Version 1.14
+
+      - Minor tidying up of documentation.
+
+      - Fixing some prerequisite issues.

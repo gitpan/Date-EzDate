@@ -1,10 +1,10 @@
 MANIFEST
 Changes
-LICENSE
-Makefile.PL
-Build.PL
 META.yml
+Makefile.PL
 README
-lib/Date/EzDate.pm
+Build.PL
+LICENSE
+t/test.t
 lib/Date/EzDate.pod
-t/regtest.t
+lib/Date/EzDate.pm

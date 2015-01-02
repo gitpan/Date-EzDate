@@ -1,12 +1,12 @@
 #!/usr/bin/perl -w
 use strict;
 use lib '../../';
-# use Debug::ShowStuff ':all';
 use Date::EzDate ':all';
 use Carp 'confess', 'croak';
-use Test;
+use Test::More;
 
-BEGIN { plan tests => 29 };
+# plan tests
+plan tests => 29;
 
 # stub for err_comp
 sub err_comp;
@@ -24,6 +24,9 @@ $jan31->{'format'}->{'name'} = 'mypattern';
 $jan31->{'format'}->{'name_changed'} = 'My Pattern';
 $jan31->{'format'}->{'pattern'} = '{Month Long} {Day Of Month} {Year} ({Weekday Long}) ({Day Of Year Base1 NoZero})';
 $jan31->{'format'}->{'output'} = 'January 31 2002 (Thursday) (31)';
+
+# TESTING
+# use Debug::ShowStuff ':all';
 
 
 
@@ -275,11 +278,11 @@ do {
 	$date->{'minofday'} = 65;
 	check_all($date);
 	
+	
 	# January 31, 2002 1:05:07 am
 	$date = Date::EzDate->new('March 31, 2002 1:05:07 am');
 	$date->{'month short'} = 'January';
 	check_all($date);
-	
 	
 	# January 31, 2002 1:05:07 am
 	$date = Date::EzDate->new('Dec 31, 2002 1:05:07 am');
@@ -643,7 +646,7 @@ sub err_comp {
 		$testname ||= 'fail';
 		
 		print STDERR 
-			"\n", $testname, "\n",
+			"\n", $testname, ":\n",
 			"\tis:     $is\n",
 			"\tshould: $should\n\n";	
 		ok(0);

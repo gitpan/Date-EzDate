@@ -4,11 +4,11 @@ author:
     - "Miko O'Sullivan <miko@idocs.com>"
 generated_by: home grown
 license: perl
-name: Date::EzDate
+name: Date-EzDate
 provides:
     Date::EzDate:
         file: lib/Date/EzDate.pm
-        version: 1.12
+        version: 1.14
 requires:
     perl: 5.003
-version: 1.12
+version: 1.14
