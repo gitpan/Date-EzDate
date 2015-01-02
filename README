@@ -1011,6 +1011,10 @@ AUTHORS
 
 VERSION
 
+    Version: 1.15
+
+HISTORY
+
     Version 0.90 November 1, 2001
 
       Initial release
@@ -1177,4 +1181,8 @@ VERSION
       - Minor tidying up of documentation.
 
       - Fixing some prerequisite issues.
+
+    Version 1.15 January 2, 2015
+
+      Fixed tests so that they use test names.
 

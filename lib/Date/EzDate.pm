@@ -3,6 +3,10 @@ use strict;
 use Carp;
 use vars qw($VERSION @ltimefields $overload $default_warning);
 
+# version
+$VERSION = '1.15';
+
+
 # documentation at end of file
 
 # debugging tools
@@ -17,9 +21,6 @@ use overload
 	'-'      => \&subtraction,           # subtraction
 	fallback => 1;                       # operations not defined here
 
-
-# version
-$VERSION = '1.14';
 
 # constants and globals
 use constant WARN_NONE   => 0;
@@ -2700,6 +2701,10 @@ DST patch submitted by Greg Estep.
 
 =head1 VERSION
 
+Version: 1.15
+
+=head1 HISTORY
+
 =over
 
 =item Version 0.90    November 1, 2001
@@ -2866,6 +2871,11 @@ or supported.  Basically, I changed my mind and am now developing it again.
 - Minor tidying up of documentation.
 
 - Fixing some prerequisite issues.
+
+=item Version 1.15 January 2, 2015
+
+Fixed tests so that they use test names.
+
 
 =back
 

@@ -988,6 +988,10 @@ DST patch submitted by Greg Estep.
 
 =head1 VERSION
 
+Version: 1.15
+
+=head1 HISTORY
+
 =over 4
 
 =item Version 0.90    November 1, 2001
@@ -1144,6 +1148,10 @@ or supported.  Basically, I changed my mind and am now developing it again.
 - Minor tidying up of documentation.
 
 - Fixing some prerequisite issues.
+
+=item Version 1.15 January 2, 2015
+
+Fixed tests so that they use test names.
 
 =back
 
