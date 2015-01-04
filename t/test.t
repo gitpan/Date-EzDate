@@ -713,6 +713,11 @@ sub err_comp {
 	# $test_name is required
 	$test_name or confess ('$test_name is required');
 	
+	# add got and should to test name
+	$test_name .=
+		' | is: ' . show_val($is) .
+		' | got: ' . show_val($should);
+	
 	if($is ne $should) {
 		if ($ENV{'IDOCSDEV'}) {
 			print STDERR 
@@ -730,6 +735,35 @@ sub err_comp {
 }
 #
 # err_comp
+#------------------------------------------------------------------------------
+
+
+#------------------------------------------------------------------------------
+# show_val
+#
+sub show_val {
+	my ($str) = @_;
+	
+	# not defined
+	if (! defined $str) {
+		return '[undef]';
+	}
+	
+	# empty string
+	if ($str eq '') {
+		return '[empty string]';
+	}
+	
+	# no content string
+	if ($str !~ m|\S|s) {
+		return '[no content string]';
+	}
+	
+	# else return value
+	return $str;
+}
+#
+# show_val
 #------------------------------------------------------------------------------
 
 

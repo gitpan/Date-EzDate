@@ -988,7 +988,7 @@ DST patch submitted by Greg Estep.
 
 =head1 VERSION
 
-Version: 1.15
+Version: 1.16
 
 =head1 HISTORY
 
@@ -1152,6 +1152,11 @@ or supported.  Basically, I changed my mind and am now developing it again.
 =item Version 1.15 January 2, 2015
 
 Fixed tests so that they use test names.
+
+=item Version 1.16 January 4, 2015
+
+No changes to module itself. Added some debugging information to the test names
+in the tests.
 
 =back
 

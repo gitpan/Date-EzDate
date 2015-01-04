@@ -4,7 +4,7 @@ use Carp;
 use vars qw($VERSION @ltimefields $overload $default_warning);
 
 # version
-$VERSION = '1.15';
+$VERSION = '1.16';
 
 
 # documentation at end of file
@@ -2701,7 +2701,7 @@ DST patch submitted by Greg Estep.
 
 =head1 VERSION
 
-Version: 1.15
+Version: 1.16
 
 =head1 HISTORY
 
@@ -2876,6 +2876,10 @@ or supported.  Basically, I changed my mind and am now developing it again.
 
 Fixed tests so that they use test names.
 
+=item Version 1.16 January 4, 2015
+
+No changes to module itself. Added some debugging information to the test names
+in the tests.
 
 =back
 
